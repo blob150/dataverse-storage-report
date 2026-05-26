@@ -24,7 +24,11 @@ const POOL_SET = 'dsr_tenantpools'
 const SETTING_SET = 'dsr_settings'
 
 export class DataverseStorageRepository implements StorageRepository {
-  constructor(private readonly client: DataverseClient) {}
+  private readonly client: DataverseClient
+
+  constructor(client: DataverseClient) {
+    this.client = client
+  }
 
   async listEnvironments(): Promise<EnvironmentRow[]> {
     const rows = await this.client.list<DataverseEnvironment>(
