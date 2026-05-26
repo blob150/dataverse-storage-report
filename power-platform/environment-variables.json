@@ -1,0 +1,51 @@
+[
+  {
+    "schemaName": "dsr_TenantId",
+    "displayName": "Tenant ID",
+    "type": "Text",
+    "defaultValue": "1557f771-4c8e-4dbd-8b80-dd00a88e833e",
+    "description": "Microsoft Entra tenant ID used by the ingest flow to request BAP admin tokens."
+  },
+  {
+    "schemaName": "dsr_EnvironmentId",
+    "displayName": "Environment ID",
+    "type": "Text",
+    "defaultValue": "e0c96096-913f-eec3-8454-d21f7b956608",
+    "description": "Power Platform environment hosting this solution."
+  },
+  {
+    "schemaName": "dsr_DataverseUrl",
+    "displayName": "Dataverse URL",
+    "type": "Text",
+    "defaultValue": "https://bprocidatest.crm.dynamics.com/",
+    "description": "Dataverse URL used by the React app and ingest flow."
+  },
+  {
+    "schemaName": "dsr_AdminClientId",
+    "displayName": "Admin App Client ID",
+    "type": "Text",
+    "defaultValue": "23426e2c-3cec-48de-8c53-bfe366373c1e",
+    "description": "Entra app registration used by the ingest flow to call api.bap.microsoft.com."
+  },
+  {
+    "schemaName": "dsr_AdminClientSecret",
+    "displayName": "Admin App Client Secret",
+    "type": "Secret",
+    "defaultValue": null,
+    "description": "Secret for the admin app registration. Set only as an environment-variable secret in the target environment; never commit the value to this repo."
+  },
+  {
+    "schemaName": "dsr_BapApiVersion",
+    "displayName": "BAP API version",
+    "type": "Text",
+    "defaultValue": "2023-06-01",
+    "description": "API version used for the Power Platform BAP admin endpoints."
+  },
+  {
+    "schemaName": "dsr_HistoryRetentionDays",
+    "displayName": "Snapshot retention (days)",
+    "type": "Number",
+    "defaultValue": 90,
+    "description": "Snapshots older than this many days are pruned by the ingest flow."
+  }
+]

@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "appId": "",
+  "appDisplayName": "Dataverse Storage Report",
+  "region": "prod",
+  "environmentId": "e0c96096-913f-eec3-8454-d21f7b956608",
+  "description": "Tenant-wide Dataverse storage report covering Database, File, and Log allocation, PayGo consumption, and tenant pool availability.",
+  "buildPath": "..\\..\\dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "databaseDetails": {
+        "referenceType": "Environmental",
+        "environmentName": "default.cds",
+        "overrideValues": {
+          "status": "NotSpecified",
+          "environmentVariableName": ""
+        },
+        "linkedEnvironmentMetadata": {
+          "resourceId": "",
+          "friendlyName": "Bprocida - Test",
+          "uniqueName": "unq5d4610990ce8ec1182f0000d3a35d",
+          "domainName": "bprocidatest",
+          "version": "9.2",
+          "instanceUrl": "https://bprocidatest.crm.dynamics.com/",
+          "instanceApiUrl": "https://bprocidatest.crm.dynamics.com/api/data/v9.2/",
+          "baseLanguage": 1033,
+          "instanceState": "Ready",
+          "createdTime": "",
+          "platformSku": ""
+        }
+      },
+      "dataSources": {
+        "dsr_environments": {
+          "entitySetName": "dsr_environments",
+          "logicalName": "dsr_environment",
+          "isHidden": false
+        },
+        "dsr_storagesnapshots": {
+          "entitySetName": "dsr_storagesnapshots",
+          "logicalName": "dsr_storagesnapshot",
+          "isHidden": false
+        },
+        "dsr_tenantpools": {
+          "entitySetName": "dsr_tenantpools",
+          "logicalName": "dsr_tenantpool",
+          "isHidden": false
+        },
+        "dsr_settings": {
+          "entitySetName": "dsr_settings",
+          "logicalName": "dsr_setting",
+          "isHidden": false
+        }
+      }
+    }
+  }
+}
