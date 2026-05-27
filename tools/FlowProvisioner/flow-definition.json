@@ -1,0 +1,415 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_http": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "dsr_sharedhttp"
+        },
+        "api": {
+          "name": "shared_http"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "dsr_shareddataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000001"
+          },
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "schema": {}
+          }
+        }
+      },
+      "actions": {
+        "Get_BAP_admin_token": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000010"
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "https://login.microsoftonline.com/@{environment('dsr_TenantId')}/oauth2/v2.0/token",
+            "headers": {
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            "body": "client_id=@{environment('dsr_AdminClientId')}&client_secret=@{environment('dsr_AdminClientSecret')}&scope=https%3A%2F%2Fapi.bap.microsoft.com%2F.default&grant_type=client_credentials"
+          },
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "inputs",
+                "outputs"
+              ]
+            }
+          }
+        },
+        "Parse_token_response": {
+          "runAfter": {
+            "Get_BAP_admin_token": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000011"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_BAP_admin_token')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "access_token": {
+                  "type": "string"
+                },
+                "expires_in": {
+                  "type": "integer"
+                },
+                "token_type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "List_environments": {
+          "runAfter": {
+            "Parse_token_response": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000020"
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "GET",
+            "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=@{environment('dsr_BapApiVersion')}",
+            "headers": {
+              "Authorization": "Bearer @{body('Parse_token_response')?['access_token']}"
+            }
+          }
+        },
+        "Parse_environments_response": {
+          "runAfter": {
+            "List_environments": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000021"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('List_environments')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "location": {
+                        "type": "string"
+                      },
+                      "properties": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "For_each_environment": {
+          "runAfter": {
+            "Parse_environments_response": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000030"
+          },
+          "type": "Foreach",
+          "foreach": "@body('Parse_environments_response')?['value']",
+          "actions": {
+            "Get_capacity_consumption": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000031"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/@{items('For_each_environment')?['name']}/capacityConsumption?api-version=@{environment('dsr_BapApiVersion')}",
+                "headers": {
+                  "Authorization": "Bearer @{body('Parse_token_response')?['access_token']}"
+                }
+              }
+            },
+            "Parse_capacity_response": {
+              "runAfter": {
+                "Get_capacity_consumption": [
+                  "Succeeded",
+                  "Failed"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000032"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@body('Get_capacity_consumption')",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "properties": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            },
+            "Upsert_environment": {
+              "runAfter": {
+                "Parse_capacity_response": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000033"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateRecordWithAlternateKey"
+                },
+                "parameters": {
+                  "entityName": "dsr_environments",
+                  "alternateKeyName": "dsr_environmentguid",
+                  "alternateKeyValue": "@{items('For_each_environment')?['name']}",
+                  "item/dsr_name": "@{items('For_each_environment')?['properties']?['displayName']}",
+                  "item/dsr_displayname": "@{items('For_each_environment')?['properties']?['displayName']}",
+                  "item/dsr_type": "@{items('For_each_environment')?['properties']?['environmentSku']}",
+                  "item/dsr_region": "@{items('For_each_environment')?['properties']?['azureRegion']}",
+                  "item/dsr_owneremail": "@{items('For_each_environment')?['properties']?['createdBy']?['email']}",
+                  "item/dsr_ownername": "@{items('For_each_environment')?['properties']?['createdBy']?['displayName']}",
+                  "item/dsr_billingmodel": "@{if(equals(items('For_each_environment')?['properties']?['billingPolicy']?['billingPolicyType'], 'PayAsYouGo'), 'PayAsYouGo', 'License')}",
+                  "item/dsr_paygosubscriptionid": "@{items('For_each_environment')?['properties']?['billingPolicy']?['azureSubscriptionId']}",
+                  "item/dsr_url": "@{items('For_each_environment')?['properties']?['linkedEnvironmentMetadata']?['instanceUrl']}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Add_storage_snapshot": {
+              "runAfter": {
+                "Upsert_environment": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000034"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord"
+                },
+                "parameters": {
+                  "entityName": "dsr_storagesnapshots",
+                  "item/dsr_name": "@{items('For_each_environment')?['properties']?['displayName']} @{utcNow()}",
+                  "item/dsr_environment@odata.bind": "/dsr_environments(dsr_environmentguid='@{items('For_each_environment')?['name']}')",
+                  "item/dsr_capturedat": "@{utcNow()}",
+                  "item/dsr_dballocatedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['database']?['allocatedGb'], 0)}",
+                  "item/dsr_dbusedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['database']?['usedGb'], 0)}",
+                  "item/dsr_fileallocatedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['file']?['allocatedGb'], 0)}",
+                  "item/dsr_fileusedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['file']?['usedGb'], 0)}",
+                  "item/dsr_logallocatedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['log']?['allocatedGb'], 0)}",
+                  "item/dsr_logusedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['log']?['usedGb'], 0)}",
+                  "item/dsr_paygoenabled": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['payAsYouGo']?['enabled'], false)}",
+                  "item/dsr_paygoconsumptiongb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['payAsYouGo']?['currentConsumptionGb'], 0)}",
+                  "item/dsr_overagegb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['overageGb'], 0)}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 10
+            }
+          }
+        },
+        "Get_tenant_capacity": {
+          "runAfter": {
+            "For_each_environment": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000040"
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "GET",
+            "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/tenantCapacity?api-version=@{environment('dsr_BapApiVersion')}",
+            "headers": {
+              "Authorization": "Bearer @{body('Parse_token_response')?['access_token']}"
+            }
+          }
+        },
+        "Parse_tenant_capacity_response": {
+          "runAfter": {
+            "Get_tenant_capacity": [
+              "Succeeded",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000041"
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_tenant_capacity')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "properties": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "Add_tenant_pool_snapshot": {
+          "runAfter": {
+            "Parse_tenant_capacity_response": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000042"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord"
+            },
+            "parameters": {
+              "entityName": "dsr_tenantpools",
+              "item/dsr_name": "Tenant pool @{utcNow()}",
+              "item/dsr_capturedat": "@{utcNow()}",
+              "item/dsr_totalallocatedgb": "@{coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['allocatedGb'], 0)}",
+              "item/dsr_totalusedgb": "@{coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['usedGb'], 0)}",
+              "item/dsr_availablegb": "@{sub(coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['allocatedGb'], 0), coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['usedGb'], 0))}",
+              "item/dsr_paygoaccrualgb": "@{coalesce(body('Parse_tenant_capacity_response')?['properties']?['payAsYouGo']?['currentConsumptionGb'], 0)}"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "List_old_snapshots": {
+          "runAfter": {
+            "Add_tenant_pool_snapshot": [
+              "Succeeded",
+              "Failed",
+              "Skipped"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000050"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "ListRecords"
+            },
+            "parameters": {
+              "entityName": "dsr_storagesnapshots",
+              "$filter": "dsr_capturedat lt @{addDays(utcNow(), mul(-1, int(environment('dsr_HistoryRetentionDays'))))}",
+              "$select": "dsr_storagesnapshotid"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "For_each_old_snapshot": {
+          "runAfter": {
+            "List_old_snapshots": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000051"
+          },
+          "type": "Foreach",
+          "foreach": "@body('List_old_snapshots')?['value']",
+          "actions": {
+            "Delete_snapshot": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000052"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "DeleteRecord"
+                },
+                "parameters": {
+                  "entityName": "dsr_storagesnapshots",
+                  "recordId": "@items('For_each_old_snapshot')?['dsr_storagesnapshotid']"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 20
+            }
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}
