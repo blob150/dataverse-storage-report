@@ -84,14 +84,20 @@ npm run dev
 ```
 
 Default mode is `mock` and ships with seeded environments so the UI is fully
-explorable offline. Switch to live Dataverse via:
+explorable offline. For local-dev runs against live Dataverse you can use
+MSAL with a single-page app registration:
 
 ```env
 VITE_AUTH_MODE=msal
 VITE_DATAVERSE_URL=https://<your-org>.crm.dynamics.com
-VITE_ENTRA_CLIENT_ID=<sign-in app registration ID>
+VITE_ENTRA_CLIENT_ID=<local-dev SPA app registration ID>
 VITE_ENTRA_TENANT_ID=<your tenant ID>
 ```
+
+> The deployed code app uses `VITE_AUTH_MODE=powerapps` (see
+> `.env.production`), which delegates auth to the Power Apps host and the
+> signed-in user — **no separate app registration is required for end-user
+> sign-in**. MSAL mode is only for running `npm run dev` outside the host.
 
 ## Scripts
 

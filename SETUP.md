@@ -8,18 +8,22 @@ target environment.
 | Tool / role                                 | Why                                                                |
 |---------------------------------------------|--------------------------------------------------------------------|
 | **Power Platform Admin** role               | Register a service principal as a Power Platform management app.   |
-| **Application Administrator** (Entra)       | Create the two app registrations and grant admin consent.          |
+| **Application Administrator** (Entra)       | Create the admin app registration and grant admin consent.        |
 | **Dataverse System Administrator** in the target env | Import the solution and assign security roles.            |
 | Node.js ≥ 20 + npm                          | Build the React code app.                                          |
 | .NET 10 SDK                                 | Run the `tools/*` provisioners.                                    |
 | Power Platform CLI (`pac`) ≥ latest         | `pac auth`, `pac solution`, `pac code`.                            |
 | PowerShell 7+ with `Microsoft.PowerApps.Administration.PowerShell` | Register the management app. |
 
-## Step 1 — Create the two app registrations
+## Step 1 — Create the admin app registration
 
-You need **two** Entra (Azure AD) app registrations.
+You need **one** Entra (Azure AD) app registration. The React code app itself
+does **not** need its own app registration — it runs inside the Power Apps
+host (`apps.powerapps.com`) and authenticates to Dataverse using the
+signed-in user's identity (`VITE_AUTH_MODE=powerapps`). The single app reg
+below is only used by the ingest flow's service principal.
 
-### 1a. DSR Admin App (used by the flow as a service principal)
+### DSR Admin App (used by the ingest flow as a service principal)
 
 This identity makes the BAP / licensing / Microsoft Graph calls inside the flow.
 
@@ -43,22 +47,6 @@ This identity makes the BAP / licensing / Microsoft Graph calls inside the flow.
    ```
 
    This is **the** step people miss. Without it, every BAP call returns 401.
-
-### 1b. DSR Sign-in App (used by the React app for end-user login)
-
-This is the public client users sign in with so the app can read Dataverse on
-their behalf.
-
-1. Entra portal → **App registrations → New registration** → name
-   `Dataverse Storage Report`.
-2. **Authentication → Add a platform → Single-page application**. Add redirect
-   URIs:
-   - `http://localhost:3000` (local dev)
-   - `https://apps.powerapps.com/play/e/<environmentId>/app/<canvas-app GUID>` —
-     fill in after Step 5.
-3. **API permissions → Add → Dynamics CRM →** *Delegated* →
-   `user_impersonation`. Grant admin consent.
-4. Note the client ID — this is `VITE_ENTRA_CLIENT_ID` in the React app.
 
 ## Step 2 — Import the solution
 
@@ -157,9 +145,10 @@ pac code push
 `environmentId` (and the embedded `linkedEnvironmentMetadata`) before pushing
 into a different org.
 
-After the first push, copy the resulting **Play URL**
-(`https://apps.powerapps.com/play/e/<envId>/app/<appId>`) and add it as a
-redirect URI to the **Sign-in app** (Step 1b → Authentication).
+After the first push, the canvas app is reachable at its **Play URL**
+(`https://apps.powerapps.com/play/e/<envId>/app/<appId>`). End users sign in
+with their normal corporate account — the host handles authentication, so
+no redirect URI configuration is needed.
 
 ## Step 6 — Turn on the flow
 
@@ -172,7 +161,7 @@ redirect URI to the **Sign-in app** (Step 1b → Authentication).
 If a run fails:
 
 - **401 from `api.bap.microsoft.com`** → service principal is not registered as
-  a Power Platform management app (Step 1a.5).
+  a Power Platform management app (Step 1, item 5).
 - **403 from `graph.microsoft.com`** → `User.Read.All` permission missing or not
   admin-consented.
 - **Secret resolves to literal string** → Step 3 quirk: the *value* record isn't
