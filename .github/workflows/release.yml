@@ -62,14 +62,54 @@ jobs:
 
       - name: Stage code app bundle into solution source
         # `pac solution pack` requires the canvas app's CodeAppPackages folder to
-        # contain the built bundle (index.html + assets/*). The folder is
-        # gitignored, so re-create it from `dist/` on every release.
+        # contain the built bundle (index.html + assets), AND the CodeAppPackageUris
+        # listed in the .meta.xml must reference real files. Vite emits hashed
+        # asset filenames that change per build, so we rewrite the meta.xml to
+        # match whatever was actually produced.
         run: |
           BUNDLE_DIR="power-platform/solution/src/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages"
+          META_XML="power-platform/solution/src/CanvasApps/dsr_dataversestoragereport_ef777.meta.xml"
+
           rm -rf "$BUNDLE_DIR"
           mkdir -p "$BUNDLE_DIR"
           cp -r dist/. "$BUNDLE_DIR/"
-          ls -la "$BUNDLE_DIR"
+          ls -la "$BUNDLE_DIR" "$BUNDLE_DIR/assets"
+
+          python3 <<'PY'
+          import os, re, glob
+          bundle = "power-platform/solution/src/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages"
+          meta = "power-platform/solution/src/CanvasApps/dsr_dataversestoragereport_ef777.meta.xml"
+
+          ctype = {
+            ".html": "text/html",
+            ".css":  "text/css",
+            ".js":   "application/javascript",
+            ".svg":  "image/svg+xml",
+            ".png":  "image/png",
+            ".ico":  "image/x-icon",
+            ".json": "application/json",
+            ".woff": "font/woff",
+            ".woff2": "font/woff2",
+          }
+          uris = []
+          for path in sorted(glob.glob(f"{bundle}/**", recursive=True)):
+              if not os.path.isfile(path):
+                  continue
+              rel = os.path.relpath(path, bundle).replace(os.sep, "/")
+              ext = os.path.splitext(rel)[1].lower()
+              t = ctype.get(ext, "application/octet-stream")
+              uris.append(f"    <CodeAppPackageUri>/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages/{rel}_ContentType_{t}</CodeAppPackageUri>")
+
+          with open(meta, "r", encoding="utf-8") as f:
+              xml = f.read()
+
+          new_block = "<CodeAppPackageUris>\n" + "\n".join(uris) + "\n  </CodeAppPackageUris>"
+          xml = re.sub(r"<CodeAppPackageUris>.*?</CodeAppPackageUris>", new_block, xml, count=1, flags=re.DOTALL)
+
+          with open(meta, "w", encoding="utf-8") as f:
+              f.write(xml)
+          print(f"Rewrote {meta} with {len(uris)} CodeAppPackageUri entries.")
+          PY
 
       - name: Pack unmanaged solution
         run: |
