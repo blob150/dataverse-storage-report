@@ -12,7 +12,7 @@ target environment.
 | **Dataverse System Administrator** in the target env | Import the solution and assign security roles.            |
 | Node.js ≥ 20 + npm                          | Build the React code app.                                          |
 | .NET 10 SDK                                 | Run the `tools/*` provisioners.                                    |
-| Power Platform CLI (`pac`) ≥ latest         | `pac auth`, `pac solution`, `pac code`.                            |
+| Power Platform CLI (`pac`) ≥ latest         | `pac auth`, `pac solution`.                                        |
 | PowerShell 7+ with `Microsoft.PowerApps.Administration.PowerShell` | Register the management app. |
 
 ## Step 1 — Create the admin app registration
@@ -36,9 +36,17 @@ This identity makes the BAP / licensing / Microsoft Graph calls inside the flow.
    - **Microsoft Graph** → *Application permissions* → **`User.Read.All`**
      (or the narrower `User.ReadBasic.All`).
    - Click **Grant admin consent**.
-5. **Register it as a Power Platform management app** so the BAP admin endpoints
-   accept its tokens. From an elevated PowerShell window, signed in as a Power
-   Platform admin:
+
+   > **What about BAP and Power Platform Licensing?** The flow also calls
+   > `api.bap.microsoft.com` and `licensing.powerplatform.microsoft.com`.
+   > These are first-party tenant-admin APIs that **do not appear in the
+   > Entra "Add API permissions" picker**. Access is granted by the
+   > management-app registration in step 5 below — not by adding API
+   > permissions here.
+
+5. **Register it as a Power Platform management app** so the BAP and
+   licensing endpoints accept its tokens. From an elevated PowerShell window,
+   signed in as a Power Platform admin:
 
    ```powershell
    Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser
@@ -46,7 +54,8 @@ This identity makes the BAP / licensing / Microsoft Graph calls inside the flow.
    New-PowerAppManagementApp -ApplicationId <DSR Admin App client ID>
    ```
 
-   This is **the** step people miss. Without it, every BAP call returns 401.
+   This is **the** step people miss. Without it, every BAP and licensing
+   call returns 401.
 
 ## Step 2 — Import the solution
 
@@ -113,12 +122,6 @@ variables**, set the **Current Value** for each:
 | DSR BAP API Version         | `2022-05-01`                                                |
 | DSR History Retention Days  | e.g. `90`                                                   |
 
-> **Secret env var quirk:** the secret value record (`environmentvariablevalue`)
-> must live in the *same solution* as the definition for the flow's
-> `RetrieveEnvironmentVariableSecretValue` action to find it. After setting the
-> value, in the solution view click **+ Add existing → More → Environment
-> variable value** and add the value record if it isn't already a member.
-
 ## Step 4 — Authorize the flow's Dataverse connection reference
 
 The flow needs a Dataverse connection (used by the secret-fetch step), and that
@@ -131,26 +134,7 @@ connection must be authorized as a user with `read` on the env-var secret tables
    `environmentvariablevalue` + `environmentvariabledefinition`).
 3. Save the connection reference.
 
-## Step 5 — Push the React code app
-
-```powershell
-cd <repo root>
-npm install
-npm run build
-cd power-platform\code-app
-pac code push
-```
-
-`power.config.json` already points at the test environment. Edit
-`environmentId` (and the embedded `linkedEnvironmentMetadata`) before pushing
-into a different org.
-
-After the first push, the canvas app is reachable at its **Play URL**
-(`https://apps.powerapps.com/play/e/<envId>/app/<appId>`). End users sign in
-with their normal corporate account — the host handles authentication, so
-no redirect URI configuration is needed.
-
-## Step 6 — Turn on the flow
+## Step 5 — Turn on the flow
 
 1. Solutions → Dataverse Storage Report → **Cloud flows** → "Ingest Dataverse
    storage capacity".
@@ -160,14 +144,13 @@ no redirect URI configuration is needed.
 
 If a run fails:
 
-- **401 from `api.bap.microsoft.com`** → service principal is not registered as
-  a Power Platform management app (Step 1, item 5).
+- **401 from `api.bap.microsoft.com` or `licensing.powerplatform.microsoft.com`**
+  → service principal is not registered as a Power Platform management app
+  (Step 1, item 5).
 - **403 from `graph.microsoft.com`** → `User.Read.All` permission missing or not
   admin-consented.
-- **Secret resolves to literal string** → Step 3 quirk: the *value* record isn't
-  in the solution.
 
-## Step 7 — Share the app with end users
+## Step 6 — Share the app with end users
 
 1. Apps → **Dataverse Storage Report** → **Share**.
 2. Assign a Dataverse security role that grants:
@@ -190,25 +173,30 @@ create a custom role copying just those table privileges.
 
 ## Updating after a release
 
-When pulling new commits:
+To pick up a new release, import the latest unmanaged zip from the
+[Releases page](https://github.com/blob150/dataverse-storage-report/releases)
+on top of the existing solution:
 
 ```powershell
-git pull
-npm install                 # if package-lock changed
-npm run build
-cd power-platform\code-app
-pac code push               # pushes the latest React bundle
+pac auth select --name <profile pointing at target env>
+pac solution import `
+  --path .\DataverseStorageReport_unmanaged.zip `
+  --force-overwrite `
+  --publish-changes
 ```
 
-For changes that touched the flow:
+This refreshes the canvas-app bundle, the flow definition, schema changes,
+and any new env-var definitions in one step. No separate `pac code push`
+is needed — the React bundle ships inside the solution zip.
+
+For developers iterating on the flow definition locally:
 
 ```powershell
 # Push the on-disk flow JSON back into Power Platform
 dotnet run --project tools\FlowProvisioner -- --update
 ```
 
-For changes that touched the solution schema (new column, new table, new env
-var definition), pack and import the updated unmanaged solution:
+For developers iterating on the solution schema, pack and import from source:
 
 ```powershell
 pac solution pack `
