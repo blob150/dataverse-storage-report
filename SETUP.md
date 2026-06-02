@@ -9,6 +9,7 @@ target environment.
 |---------------------------------------------|--------------------------------------------------------------------|
 | **Power Platform Admin** role               | Register a service principal as a Power Platform management app.   |
 | **Application Administrator** (Entra)       | Create the admin app registration and grant admin consent.        |
+| **Owner** or **User Access Administrator** on the Key Vault holding the client secret | Grant `Key Vault Secrets User` to yourself and to the Dataverse first-party SP. |
 | **Dataverse System Administrator** in the target env | Import the solution and assign security roles.            |
 | Node.js ≥ 20 + npm                          | Build the React code app.                                          |
 | .NET 10 SDK                                 | Run the `tools/*` provisioners.                                    |
@@ -124,10 +125,49 @@ variables**, set the **Current Value** for each:
 | Display name                | Value                                                       |
 |-----------------------------|-------------------------------------------------------------|
 | DSR Tenant ID               | Entra tenant GUID of the target tenant                      |
-| DSR Admin Client ID         | Step 1a client ID                                           |
-| DSR Admin Client Secret     | Step 1a secret value (this is the Secret-typed env var)     |
+| DSR Admin Client ID         | Step 1 client ID                                            |
+| DSR Admin Client Secret     | Step 1 secret value (this is the Secret-typed env var — see Step 3a) |
 | DSR BAP API Version         | `2022-05-01`                                                |
 | DSR History Retention Days  | e.g. `90`                                                   |
+
+### Step 3a — Storing the client secret (Azure Key Vault permissions)
+
+`DSR Admin Client Secret` is a **Secret-typed** environment variable. The
+solution ships with the definition pointing at **Azure Key Vault** as the
+secret store (`<secretstore>0</secretstore>`), which is the most secure
+option but requires two RBAC role assignments on the Key Vault that holds
+the secret:
+
+1. **You (the person setting the value)** — assign yourself
+   **`Key Vault Secrets User`** on the Key Vault. Without this, the
+   maker portal can't enumerate secrets when you go to bind the env-var
+   value, and you'll see a generic "no secrets found" or 403 error.
+2. **The Dataverse first-party service principal** — assign
+   **`Key Vault Secrets User`** to the enterprise application named
+   **`Dataverse`** (App ID `00000007-0000-0000-c000-000000000000`).
+   This is the identity Power Platform uses at runtime to read the
+   secret when the flow's `RetrieveEnvironmentVariableSecretValue`
+   action fires. Without this, every flow run logs
+   `Caller does not have access to the requested secret`.
+
+If the Key Vault has a firewall enabled, also allow Power Platform's
+service tag or document IPs (see the Microsoft docs on
+[Configure Power Platform to use Azure Key Vault](https://learn.microsoft.com/power-platform/admin/use-azure-key-vault-for-secrets)).
+
+Then in the maker portal:
+
+- **Solutions → Dataverse Storage Report → Environment variables → DSR
+  Admin Client Secret → New value → Azure Key Vault**.
+- Pick the subscription, vault, secret name, and (optionally) version.
+
+> **Don't want to use Key Vault?** You can switch the secret store to
+> Microsoft-managed (no Azure subscription / no KV / no RBAC required) by
+> editing
+> `power-platform/solution/src/environmentvariabledefinitions/dsr_adminclientsecret/environmentvariabledefinition.xml`
+> and changing `<secretstore>0</secretstore>` to `<secretstore>1</secretstore>`,
+> then re-importing the solution. With store `1`, you paste the secret
+> value directly into the maker portal and Power Platform stores it for
+> you — no Key Vault permissions needed at all.
 
 ## Step 4 — Authorize the flow's Dataverse connection reference
 
@@ -164,6 +204,10 @@ If a run fails:
   (Step 1, item 5).
 - **403 from `graph.microsoft.com`** → `User.Read.All` permission missing or not
   admin-consented.
+- **`Caller does not have access to the requested secret`** → the Dataverse
+  first-party service principal (`00000007-0000-0000-c000-000000000000`)
+  does not have `Key Vault Secrets User` on the Key Vault holding the
+  secret (Step 3a).
 
 ## Step 6 — Share the app with end users
 
@@ -183,6 +227,7 @@ create a custom role copying just those table privileges.
 | Import solution / publish customisations   | Dataverse **System Administrator** in target env                              |
 | Register management app                    | **Power Platform Administrator** (tenant role)                                |
 | Grant Graph `User.Read.All` admin consent  | **Application Administrator** or **Global Administrator** (Entra)            |
+| Bind / read the client-secret env var (KV) | `Key Vault Secrets User` on the KV — assigned to **both** the user setting the value AND the `Dataverse` first-party SP (`00000007-0000-0000-c000-000000000000`) |
 | Authorize the flow's Dataverse connection  | A real user with read on env-var tables and CRUD on the four `dsr_` tables (System Admin works) |
 | End-user runs the report                   | Custom Dataverse role with read on the four `dsr_` tables (write on `dsr_setting`) |
 
