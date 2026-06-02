@@ -1,5 +1,5 @@
-import type { AppSettings, EnvironmentRow, StorageSnapshot, TenantPool } from '../domain/types'
-import { mockEnvironments, mockSettings, mockSnapshots, mockTenantPool } from '../data/mockData'
+import type { AppSettings, EnvironmentRow, StorageSnapshot } from '../domain/types'
+import { mockEnvironments, mockSettings, mockSnapshots } from '../data/mockData'
 import type { StorageRepository } from './StorageRepository'
 
 export class MockStorageRepository implements StorageRepository {
@@ -7,7 +7,6 @@ export class MockStorageRepository implements StorageRepository {
 
   async listEnvironments(): Promise<EnvironmentRow[]> { return mockEnvironments }
   async listLatestSnapshots(): Promise<StorageSnapshot[]> { return mockSnapshots }
-  async getTenantPool(): Promise<TenantPool | null> { return mockTenantPool }
   async getSettings(): Promise<AppSettings> { return this.settings }
   async saveSettings(settings: AppSettings): Promise<void> { this.settings = settings }
 }

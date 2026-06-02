@@ -12,12 +12,10 @@ import {
   type EnvironmentRow,
   type EvaluatedRow,
   type StorageSnapshot,
-  type TenantPool,
 } from './domain/types'
 import { evaluateRows } from './domain/evaluate'
 import { ReportPage } from './features/report/ReportPage'
 import { SettingsPage } from './features/settings/SettingsPage'
-import { TenantPoolCard } from './features/tenantpool/TenantPoolCard'
 
 type Tab = 'report' | 'settings'
 
@@ -32,7 +30,6 @@ export default function App() {
 
   const [environments, setEnvironments] = useState<EnvironmentRow[]>([])
   const [snapshots, setSnapshots] = useState<StorageSnapshot[]>([])
-  const [pool, setPool] = useState<TenantPool | null>(null)
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
 
   useEffect(() => {
@@ -54,15 +51,13 @@ export default function App() {
     setLoading(true)
     setError(null)
     try {
-      const [envs, snaps, p, s] = await Promise.all([
+      const [envs, snaps, s] = await Promise.all([
         r.listEnvironments(),
         r.listLatestSnapshots(),
-        r.getTenantPool(),
         r.getSettings(),
       ])
       setEnvironments(envs)
       setSnapshots(snaps)
-      setPool(p)
       setSettings(s)
     } catch (e) {
       setError(formatError(e))
@@ -89,19 +84,6 @@ export default function App() {
     } finally {
       setSigningIn(false)
     }
-  }
-
-  async function refreshNow() {
-    if (!repo) return
-    if (appConfig.refreshFlowUrl) {
-      try {
-        const res = await fetch(appConfig.refreshFlowUrl, { method: 'POST' })
-        if (!res.ok) throw new Error(`Refresh flow returned ${res.status}`)
-      } catch (e) {
-        setError(`Could not trigger ingest flow: ${formatError(e)}`)
-      }
-    }
-    await reload(repo)
   }
 
   async function saveSettings(next: AppSettings) {
@@ -180,7 +162,7 @@ export default function App() {
         <Metric label="PayGo accruing" value={summary.paygo} valueColor={summary.paygo > 0 ? 'var(--over)' : undefined} />
       </div>
 
-      <TenantPoolCard pool={pool} />
+      <TenantSummary rows={evaluated} />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <TabButton active={tab === 'report'} onClick={() => setTab('report')}>Report</TabButton>
@@ -192,8 +174,6 @@ export default function App() {
           rows={evaluated}
           settings={settings}
           loading={loading}
-          onRefresh={refreshNow}
-          canRefresh={appConfig.authMode !== 'mock' || true}
         />
       )}
       {tab === 'settings' && (
@@ -219,8 +199,7 @@ function Metric({ label, value, valueColor }: { label: string; value: number; va
   )
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {  return (
     <button
       onClick={onClick}
       style={{
@@ -239,4 +218,91 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 function formatError(e: unknown): string {
   if (e instanceof Error) return e.message
   return String(e)
+}
+
+function TenantSummary({ rows }: { rows: EvaluatedRow[] }) {
+  const totals = rows.reduce(
+    (acc, r) => {
+      const s = r.snapshot
+      if (!s) return acc
+      acc.dbUsed += s.database.usedGb
+      acc.dbAlloc += s.database.allocatedGb
+      acc.fileUsed += s.file.usedGb
+      acc.fileAlloc += s.file.allocatedGb
+      acc.logUsed += s.log.usedGb
+      acc.logAlloc += s.log.allocatedGb
+      acc.payGo += s.payGoConsumptionGb
+      if (r.payGoFlag) acc.payGoEnvs += 1
+      return acc
+    },
+    { dbUsed: 0, dbAlloc: 0, fileUsed: 0, fileAlloc: 0, logUsed: 0, logAlloc: 0, payGo: 0, payGoEnvs: 0 },
+  )
+
+  const totalUsed = totals.dbUsed + totals.fileUsed + totals.logUsed
+  const totalAlloc = totals.dbAlloc + totals.fileAlloc + totals.logAlloc
+  const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  const dim = (label: string, used: number, alloc: number, color: string) => {
+    const denom = Math.max(used, alloc, 1)
+    const allocPct = alloc > 0 ? Math.min(100, (Math.min(used, alloc) / denom) * 100) : 0
+    const overPct = alloc > 0 && used > alloc ? Math.min(100 - allocPct, ((used - alloc) / denom) * 100) : 0
+    const noQuotaPct = alloc <= 0 ? Math.min(100, (used / denom) * 100) : 0
+    const quotaMarkerLeft = alloc > 0 && used > alloc ? `${(alloc / denom) * 100}%` : null
+    return (
+      <div style={{ flex: '1 1 0', minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4, gap: 8 }}>
+          <strong>{label}</strong>
+          <span style={{ color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {fmt(used)} GB{alloc > 0 ? ` / ${fmt(alloc)} GB` : ''}
+          </span>
+        </div>
+        <div style={{ background: 'var(--border)', height: 10, borderRadius: 5, overflow: 'hidden', position: 'relative', display: 'flex' }}>
+          {alloc > 0 ? (
+            <>
+              <div style={{ background: color, height: '100%', width: `${allocPct}%` }} />
+              {overPct > 0 && (
+                <div style={{ background: 'var(--over)', height: '100%', width: `${overPct}%` }} />
+              )}
+              {quotaMarkerLeft && (
+                <div style={{ position: 'absolute', left: quotaMarkerLeft, top: 0, bottom: 0, width: 1, background: 'rgba(0,0,0,0.55)' }} />
+              )}
+            </>
+          ) : (
+            <div style={{ background: color, height: '100%', width: `${noQuotaPct}%`, opacity: 0.7 }} />
+          )}
+        </div>
+        {alloc <= 0 && (
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>tenant pool (no manual quota)</div>
+        )}
+        {alloc > 0 && used > alloc && (
+          <div style={{ fontSize: 11, color: 'var(--over)', marginTop: 2 }}>
+            +{fmt(used - alloc)} GB over quota
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="status-card" style={{ background: 'white', borderRadius: 10, boxShadow: 'var(--shadow)', padding: 14, marginBottom: 12, width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 15 }}>Tenant totals</h3>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            Aggregated across {rows.length} environments. Manual quota = sum of per-env allocations from the licensing API; tenant-pool grant is not yet ingested.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+          <span><strong>{fmt(totalUsed)} GB</strong> total used</span>
+          {totalAlloc > 0 && <span><strong>{fmt(totalAlloc)} GB</strong> manual quota</span>}
+          {totals.payGo > 0 && <span style={{ color: 'var(--over)' }}><strong>+{fmt(totals.payGo)} GB</strong> PayGo</span>}
+          {totals.payGoEnvs > 0 && <span>{totals.payGoEnvs} env{totals.payGoEnvs === 1 ? '' : 's'} on PayGo</span>}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'nowrap' }}>
+        {dim('Database', totals.dbUsed, totals.dbAlloc, 'var(--accent)')}
+        {dim('File', totals.fileUsed, totals.fileAlloc, '#0ea5a4')}
+        {dim('Log', totals.logUsed, totals.logAlloc, '#a855f7')}
+      </div>
+    </div>
+  )
 }

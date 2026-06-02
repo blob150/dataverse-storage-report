@@ -9,11 +9,6 @@ export const dataSourcesInfo = {
     dataSourceType: 'Dataverse',
     apis: {},
   },
-  dsr_tenantpools: {
-    tableId: 'dsr_tenantpool',
-    dataSourceType: 'Dataverse',
-    apis: {},
-  },
   dsr_settings: {
     tableId: 'dsr_setting',
     dataSourceType: 'Dataverse',

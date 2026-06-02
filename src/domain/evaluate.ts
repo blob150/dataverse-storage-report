@@ -18,13 +18,14 @@ export function evaluateRow(
   }
 
   const triggers: TriggeredBy = []
-  const dims: Array<{ kind: StorageKind; percent: number }> = [
-    { kind: 'database', percent: snapshot.database.percent },
-    { kind: 'file', percent: snapshot.file.percent },
-    { kind: 'log', percent: snapshot.log.percent },
+  const dims: Array<{ kind: StorageKind; percent: number; allocated: number }> = [
+    { kind: 'database', percent: snapshot.database.percent, allocated: snapshot.database.allocatedGb },
+    { kind: 'file', percent: snapshot.file.percent, allocated: snapshot.file.allocatedGb },
+    { kind: 'log', percent: snapshot.log.percent, allocated: snapshot.log.allocatedGb },
   ]
 
   for (const dim of dims) {
+    if (dim.allocated <= 0) continue
     if (dim.percent >= thresholds.criticalPercent) {
       triggers.push({ kind: dim.kind, status: 'over', percent: dim.percent })
     } else if (dim.percent >= thresholds.warnPercent) {
@@ -32,13 +33,21 @@ export function evaluateRow(
     }
   }
 
-  const payGoFlag = snapshot.payGoEnabled && snapshot.payGoConsumptionGb > 0
+  const payGoFlag = snapshot.payGoEnabled || snapshot.payGoConsumptionGb > 0
+
+  // Envs with any PayGo signal (entitled OR active consumption) have an
+  // overflow path — labelling them "over capacity" misleads admins. Downgrade
+  // the per-dim "over" triggers to "warn" so the chips still surface heavy
+  // usage but the row doesn't read as a hard breach.
+  const displayTriggers: TriggeredBy = payGoFlag
+    ? triggers.map((t) => (t.status === 'over' ? { ...t, status: 'warn' } : t))
+    : triggers
 
   let status: EvaluatedRow['status'] = 'ok'
-  if (triggers.some((t) => t.status === 'over') || payGoFlag) status = 'over'
-  else if (triggers.some((t) => t.status === 'warn')) status = 'warn'
+  if (displayTriggers.some((t) => t.status === 'over')) status = 'over'
+  else if (displayTriggers.some((t) => t.status === 'warn')) status = 'warn'
 
-  return { environment, snapshot, status, triggers, payGoFlag }
+  return { environment, snapshot, status, triggers: displayTriggers, payGoFlag }
 }
 
 export function evaluateRows(

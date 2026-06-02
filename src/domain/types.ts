@@ -68,15 +68,6 @@ export type EvaluatedRow = {
   payGoFlag: boolean
 }
 
-export type TenantPool = {
-  id: string
-  capturedAt: string
-  totalAllocatedGb: number
-  totalUsedGb: number
-  availableGb: number
-  payGoAccrualGb: number
-}
-
 export type AppSettings = {
   warnPercent: number
   criticalPercent: number
@@ -98,3 +89,18 @@ export const ALL_ENVIRONMENT_TYPES: EnvironmentType[] = [
   'Teams',
   'Unknown',
 ]
+
+// Whether an environment type draws from the shared tenant Dataverse storage pool.
+// Developer, Teams, and Trial environments have their own per-license/per-user
+// allocations that do NOT count against the tenant pool — admins managing pool
+// capacity typically want to filter those out.
+export function isPoolImpacting(type: EnvironmentType): boolean {
+  switch (type) {
+    case 'Developer':
+    case 'Teams':
+    case 'Trial':
+      return false
+    default:
+      return true
+  }
+}

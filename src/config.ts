@@ -5,7 +5,6 @@ export type AppConfig = {
   dataverseUrl: string
   clientId: string
   tenantId: string
-  refreshFlowUrl: string
 }
 
 export const appConfig: AppConfig = {
@@ -13,7 +12,6 @@ export const appConfig: AppConfig = {
   dataverseUrl: import.meta.env.VITE_DATAVERSE_URL ?? '',
   clientId: import.meta.env.VITE_ENTRA_CLIENT_ID ?? '',
   tenantId: import.meta.env.VITE_ENTRA_TENANT_ID ?? 'common',
-  refreshFlowUrl: import.meta.env.VITE_REFRESH_FLOW_URL ?? '',
 }
 
 export function getRequiredDataverseConfig(config = appConfig) {

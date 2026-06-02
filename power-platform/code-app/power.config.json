@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "appId": "",
+  "appId": "8fce8547-9dbe-427a-9838-104537d62f55",
   "appDisplayName": "Dataverse Storage Report",
   "region": "prod",
   "environmentId": "e0c96096-913f-eec3-8454-d21f7b956608",
@@ -42,11 +42,6 @@
         "dsr_storagesnapshots": {
           "entitySetName": "dsr_storagesnapshots",
           "logicalName": "dsr_storagesnapshot",
-          "isHidden": false
-        },
-        "dsr_tenantpools": {
-          "entitySetName": "dsr_tenantpools",
-          "logicalName": "dsr_tenantpool",
           "isHidden": false
         },
         "dsr_settings": {

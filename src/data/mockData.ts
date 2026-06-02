@@ -2,7 +2,6 @@ import type {
   AppSettings,
   EnvironmentRow,
   StorageSnapshot,
-  TenantPool,
 } from '../domain/types'
 import { DEFAULT_SETTINGS } from '../domain/types'
 
@@ -87,13 +86,5 @@ export const mockSnapshots: StorageSnapshot[] = [
     payGoEnabled: false, payGoConsumptionGb: 0, overageGb: 0,
   },
 ]
-
-export const mockTenantPool: TenantPool = {
-  id: 'pool-1', capturedAt,
-  totalAllocatedGb: 250,
-  totalUsedGb: 178,
-  availableGb: 72,
-  payGoAccrualGb: 3.1,
-}
 
 export const mockSettings: AppSettings = { ...DEFAULT_SETTINGS }

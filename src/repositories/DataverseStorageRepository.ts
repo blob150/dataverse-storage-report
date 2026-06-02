@@ -3,24 +3,20 @@ import {
   mapEnvironment,
   mapSetting,
   mapSnapshot,
-  mapTenantPool,
   type DataverseEnvironment,
   type DataverseSetting,
   type DataverseStorageSnapshot,
-  type DataverseTenantPool,
 } from '../dataverse/mappers'
 import {
   DEFAULT_SETTINGS,
   type AppSettings,
   type EnvironmentRow,
   type StorageSnapshot,
-  type TenantPool,
 } from '../domain/types'
 import type { StorageRepository } from './StorageRepository'
 
 const ENVIRONMENT_SET = 'dsr_environments'
 const SNAPSHOT_SET = 'dsr_storagesnapshots'
-const POOL_SET = 'dsr_tenantpools'
 const SETTING_SET = 'dsr_settings'
 
 export class DataverseStorageRepository implements StorageRepository {
@@ -39,28 +35,18 @@ export class DataverseStorageRepository implements StorageRepository {
   }
 
   async listLatestSnapshots(): Promise<StorageSnapshot[]> {
-    // Pull the most recent snapshot per environment. Dataverse doesn't have a
-    // grouped-top query, so we fetch the latest N snapshots ordered by capture
-    // time and de-dupe client-side. The ingest flow keeps history small enough
-    // that a generous top is fine for typical tenants.
-    const rows = await this.client.list<DataverseStorageSnapshot>(
-      SNAPSHOT_SET,
-      '$orderby=dsr_capturedat desc&$top=500',
-    )
-    const mapped = rows.map(mapSnapshot)
+    // Snapshots accumulate per ingest run; pull the last 48h and paginate so
+    // every environment's most recent row is included even when the history
+    // table holds many thousands of older snapshots.
+    const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    const query = `$orderby=dsr_capturedat desc&$filter=dsr_capturedat gt ${sinceIso}`
+    const rows = await this.client.listAll<DataverseStorageSnapshot>(SNAPSHOT_SET, query)
     const byEnv = new Map<string, StorageSnapshot>()
-    for (const s of mapped) {
-      if (!byEnv.has(s.environmentId)) byEnv.set(s.environmentId, s)
+    for (const row of rows) {
+      const snap = mapSnapshot(row)
+      if (!byEnv.has(snap.environmentId)) byEnv.set(snap.environmentId, snap)
     }
     return Array.from(byEnv.values())
-  }
-
-  async getTenantPool(): Promise<TenantPool | null> {
-    const rows = await this.client.list<DataverseTenantPool>(
-      POOL_SET,
-      '$orderby=dsr_capturedat desc&$top=1',
-    )
-    return rows[0] ? mapTenantPool(rows[0]) : null
   }
 
   async getSettings(): Promise<AppSettings> {

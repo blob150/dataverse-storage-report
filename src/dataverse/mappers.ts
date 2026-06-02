@@ -4,7 +4,6 @@ import type {
   EnvironmentRow,
   EnvironmentType,
   StorageSnapshot,
-  TenantPool,
 } from '../domain/types'
 
 export type DataverseEnvironment = {
@@ -22,7 +21,9 @@ export type DataverseEnvironment = {
 
 export type DataverseStorageSnapshot = {
   dsr_storagesnapshotid: string
-  _dsr_environment_value: string
+  _dsr_environment_value?: string
+  dsr_environment?: unknown
+  'dsr_Environment@odata.bind'?: string
   dsr_capturedat: string
   dsr_dballocatedgb: number
   dsr_dbusedgb: number
@@ -33,15 +34,6 @@ export type DataverseStorageSnapshot = {
   dsr_paygoenabled: boolean
   dsr_paygoconsumptiongb: number
   dsr_overagegb: number
-}
-
-export type DataverseTenantPool = {
-  dsr_tenantpoolid: string
-  dsr_capturedat: string
-  dsr_totalallocatedgb: number
-  dsr_totalusedgb: number
-  dsr_availablegb: number
-  dsr_paygoaccrualgb: number
 }
 
 export type DataverseSetting = {
@@ -68,69 +60,94 @@ function asBilling(value: string): BillingModel {
 }
 
 function pct(used: number, allocated: number): number {
-  if (!allocated || allocated <= 0) return 0
-  return Math.round((used / allocated) * 1000) / 10
+  const u = Number(used) || 0
+  const a = Number(allocated) || 0
+  if (a <= 0) return 0
+  return Math.round((u / a) * 1000) / 10
+}
+
+function n(value: unknown): number {
+  const x = Number(value)
+  return Number.isFinite(x) ? x : 0
+}
+
+function s(value: unknown): string {
+  return value == null ? '' : String(value)
 }
 
 export function mapEnvironment(row: DataverseEnvironment): EnvironmentRow {
   return {
-    id: row.dsr_environmentid,
-    environmentId: row.dsr_environmentguid,
-    displayName: row.dsr_displayname,
-    type: asType(row.dsr_type),
-    region: row.dsr_region,
-    ownerEmail: row.dsr_owneremail,
-    ownerName: row.dsr_ownername,
-    billingModel: asBilling(row.dsr_billingmodel),
-    payGoSubscriptionId: row.dsr_paygosubscriptionid,
-    url: row.dsr_url,
+    id: s(row.dsr_environmentid).toLowerCase(),
+    environmentId: s(row.dsr_environmentguid),
+    displayName: s(row.dsr_displayname),
+    type: asType(s(row.dsr_type)),
+    region: s(row.dsr_region),
+    ownerEmail: s(row.dsr_owneremail),
+    ownerName: s(row.dsr_ownername),
+    billingModel: asBilling(s(row.dsr_billingmodel)),
+    payGoSubscriptionId: row.dsr_paygosubscriptionid ?? undefined,
+    url: row.dsr_url ?? undefined,
   }
 }
 
 export function mapSnapshot(row: DataverseStorageSnapshot): StorageSnapshot {
+  const dbAlloc = n(row.dsr_dballocatedgb)
+  const dbUsed = n(row.dsr_dbusedgb)
+  const fileAlloc = n(row.dsr_fileallocatedgb)
+  const fileUsed = n(row.dsr_fileusedgb)
+  const logAlloc = n(row.dsr_logallocatedgb)
+  const logUsed = n(row.dsr_logusedgb)
   return {
-    id: row.dsr_storagesnapshotid,
-    environmentId: row._dsr_environment_value,
-    capturedAt: row.dsr_capturedat,
-    database: {
-      allocatedGb: row.dsr_dballocatedgb ?? 0,
-      usedGb: row.dsr_dbusedgb ?? 0,
-      percent: pct(row.dsr_dbusedgb ?? 0, row.dsr_dballocatedgb ?? 0),
-    },
-    file: {
-      allocatedGb: row.dsr_fileallocatedgb ?? 0,
-      usedGb: row.dsr_fileusedgb ?? 0,
-      percent: pct(row.dsr_fileusedgb ?? 0, row.dsr_fileallocatedgb ?? 0),
-    },
-    log: {
-      allocatedGb: row.dsr_logallocatedgb ?? 0,
-      usedGb: row.dsr_logusedgb ?? 0,
-      percent: pct(row.dsr_logusedgb ?? 0, row.dsr_logallocatedgb ?? 0),
-    },
-    payGoEnabled: row.dsr_paygoenabled ?? false,
-    payGoConsumptionGb: row.dsr_paygoconsumptiongb ?? 0,
-    overageGb: row.dsr_overagegb ?? 0,
+    id: s(row.dsr_storagesnapshotid),
+    environmentId: extractLookupId(row),
+    capturedAt: s(row.dsr_capturedat),
+    database: { allocatedGb: dbAlloc, usedGb: dbUsed, percent: pct(dbUsed, dbAlloc) },
+    file: { allocatedGb: fileAlloc, usedGb: fileUsed, percent: pct(fileUsed, fileAlloc) },
+    log: { allocatedGb: logAlloc, usedGb: logUsed, percent: pct(logUsed, logAlloc) },
+    payGoEnabled: Boolean(row.dsr_paygoenabled),
+    payGoConsumptionGb: n(row.dsr_paygoconsumptiongb),
+    overageGb: n(row.dsr_overagegb),
   }
 }
 
-export function mapTenantPool(row: DataverseTenantPool): TenantPool {
-  return {
-    id: row.dsr_tenantpoolid,
-    capturedAt: row.dsr_capturedat,
-    totalAllocatedGb: row.dsr_totalallocatedgb ?? 0,
-    totalUsedGb: row.dsr_totalusedgb ?? 0,
-    availableGb: row.dsr_availablegb ?? 0,
-    payGoAccrualGb: row.dsr_paygoaccrualgb ?? 0,
+const GUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+
+function extractLookupId(row: DataverseStorageSnapshot): string {
+  // The Power Apps Code App SDK doesn't normalize lookup column names. Depending
+  // on the platform version we've seen the env reference surface as
+  //   _dsr_environment_value (Web API style)
+  //   dsr_environment        (string GUID, or { id } / { dsr_environmentid } object)
+  //   dsr_Environment@odata.bind = "/dsr_environments({guid})"
+  // Look in all three so the join to dsr_environments doesn't silently drop rows.
+  const candidates: unknown[] = [
+    row._dsr_environment_value,
+    row.dsr_environment,
+    row['dsr_Environment@odata.bind'],
+  ]
+  for (const c of candidates) {
+    if (!c) continue
+    if (typeof c === 'string') {
+      const m = c.match(GUID_RE)
+      if (m) return m[0].toLowerCase()
+    } else if (typeof c === 'object') {
+      const o = c as Record<string, unknown>
+      const id = (o.id ?? o.dsr_environmentid ?? o.value) as string | undefined
+      if (typeof id === 'string') {
+        const m = id.match(GUID_RE)
+        if (m) return m[0].toLowerCase()
+      }
+    }
   }
+  return ''
 }
 
 export function mapSetting(row: DataverseSetting): AppSettings {
   return {
-    warnPercent: row.dsr_warnpercent ?? 80,
-    criticalPercent: row.dsr_criticalpercent ?? 100,
-    defaultEnvironmentTypes: (row.dsr_defaultenvironmenttypes ?? 'Production,Sandbox')
+    warnPercent: n(row.dsr_warnpercent) || 80,
+    criticalPercent: n(row.dsr_criticalpercent) || 100,
+    defaultEnvironmentTypes: (s(row.dsr_defaultenvironmenttypes) || 'Production,Sandbox')
       .split(',')
-      .map((s) => s.trim())
+      .map((t) => t.trim())
       .filter(Boolean) as EnvironmentType[],
   }
 }
