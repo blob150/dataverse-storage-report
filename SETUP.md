@@ -60,25 +60,48 @@ their behalf.
    `user_impersonation`. Grant admin consent.
 4. Note the client ID — this is `VITE_ENTRA_CLIENT_ID` in the React app.
 
-## Step 2 — Pack and import the solution
+## Step 2 — Import the solution
 
-The solution source is committed in `power-platform/solution/src/`. Pack it,
-then import it.
+Two paths — pick one:
+
+### 2a. Quick install (prebuilt zip)
+
+For users who just want to install without building from source. Both zips are
+committed in `power-platform/solution/`:
+
+| File                                       | When to use                                                     |
+|--------------------------------------------|-----------------------------------------------------------------|
+| `DataverseStorageReport_unmanaged.zip`     | Dev / customisation environments. Components are editable.     |
+| `DataverseStorageReport_managed.zip`       | Production. Components are locked; uninstall removes cleanly.  |
+
+```powershell
+cd <repo root>
+pac auth select --name <profile pointing at target env>
+pac solution import `
+  --path power-platform\solution\DataverseStorageReport_managed.zip `
+  --activate-plugins `
+  --publish-changes
+```
+
+### 2b. Build from source
+
+For developers iterating on the solution shape. The solution source is in
+`power-platform/solution/src/` — pack it, then import.
 
 ```powershell
 cd <repo root>
 pac auth select --name <profile pointing at target env>
 pac solution pack `
-  --zipfile power-platform\solution\DataverseStorageReport.zip `
+  --zipfile power-platform\solution\DataverseStorageReport_unmanaged.zip `
   --folder  power-platform\solution\src `
   --packagetype Unmanaged
 pac solution import `
-  --path power-platform\solution\DataverseStorageReport.zip `
+  --path power-platform\solution\DataverseStorageReport_unmanaged.zip `
   --activate-plugins `
   --publish-changes
 ```
 
-This creates the four `dsr_` tables, the five environment variable
+Either path creates the four `dsr_` tables, the five environment variable
 *definitions*, the cloud flow (as a draft), and the canvas-app placeholder.
 
 > If you'd rather provision tables imperatively the first time (e.g. when

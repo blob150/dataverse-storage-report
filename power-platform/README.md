@@ -14,18 +14,20 @@ power-platform/
 │   └── dsr-ingest-capacity/
 │       └── flow-definition.json       # canonical flow JSON (workflow.clientdata)
 └── solution/
-    ├── DataverseStorageReport.zip     # exported solution (gitignored)
-    └── src/                           # `pac solution unpack` output, committed
-        ├── CanvasApps/                # canvas-app metadata (bundle gitignored)
-        ├── Entities/                  # dsr_Environment, dsr_StorageSnapshot, …
-        ├── Workflows/                 # workflow XML (clientdata mirrors flow JSON)
+    ├── DataverseStorageReport_managed.zip     # exported solution (managed, committed)
+    ├── DataverseStorageReport_unmanaged.zip   # exported solution (unmanaged, committed)
+    └── src/                                   # `pac solution unpack` output, committed
+        ├── CanvasApps/                        # canvas-app metadata (bundle gitignored)
+        ├── Entities/                          # dsr_Environment, dsr_StorageSnapshot, …
+        ├── Workflows/                         # workflow XML (clientdata mirrors flow JSON)
         ├── environmentvariabledefinitions/
         ├── Other/Solution.xml
         └── Other/Customizations.xml
 ```
 
-The exported `.zip` is gitignored — rebuild it from `src/` with
-`pac solution pack` whenever you need an importable artifact.
+Both zips are committed for one-click install via `pac solution import` (see
+[`../SETUP.md`](../SETUP.md) Step 2a). Source under `src/` is the canonical form
+for diffs and PRs; rebuild zips with `pac solution pack` after editing source.
 
 ## Dataverse tables
 
