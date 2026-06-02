@@ -58,13 +58,6 @@ This identity makes the BAP / licensing / Microsoft Graph calls inside the flow.
    This is **the** step people miss. Without it, every BAP and licensing
    call returns 401.
 
-> **Does the service principal need a Dataverse application user / role?**
-> No. The flow uses the SP only for outbound HTTP calls to BAP, Licensing,
-> and Graph. All Dataverse reads/writes go through the `shared_commondataserviceforapps`
-> connection (a user-authorized connection — see Step 4). You do **not**
-> need to create an application user or assign a Dataverse security role
-> for the SP in the target environment.
-
 ## Step 2 — Import the solution
 
 Two paths — pick one:
