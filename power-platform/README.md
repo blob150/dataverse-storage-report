@@ -14,8 +14,6 @@ power-platform/
 │   └── dsr-ingest-capacity/
 │       └── flow-definition.json       # canonical flow JSON (workflow.clientdata)
 └── solution/
-    ├── DataverseStorageReport_managed.zip     # exported solution (managed, committed)
-    ├── DataverseStorageReport_unmanaged.zip   # exported solution (unmanaged, committed)
     └── src/                                   # `pac solution unpack` output, committed
         ├── CanvasApps/                        # canvas-app metadata (bundle gitignored)
         ├── Entities/                          # dsr_Environment, dsr_StorageSnapshot, …
@@ -25,9 +23,11 @@ power-platform/
         └── Other/Customizations.xml
 ```
 
-Both zips are committed for one-click install via `pac solution import` (see
-[`../SETUP.md`](../SETUP.md) Step 2a). Source under `src/` is the canonical form
-for diffs and PRs; rebuild zips with `pac solution pack` after editing source.
+Solution zips are not stored in git — `.github/workflows/release.yml` builds
+them from `src/` on every `v*` tag push and publishes both managed and
+unmanaged zips to **GitHub Releases**. End users grab the latest zip from
+the Releases page (see [`../SETUP.md`](../SETUP.md) Step 2a). Source under
+`src/` is the canonical form for diffs and PRs.
 
 ## Dataverse tables
 
@@ -93,6 +93,25 @@ step 2.
 ID, canvas-app GUID, Dataverse instance URL, table data sources). Source for the
 React app is `src/` at the repo root; build output (`dist/`) is what
 `pac code push` packages.
+
+## Cutting a release
+
+Solution zips are **not** committed — they're built on demand by
+`.github/workflows/release.yml` whenever a `v*` tag is pushed.
+
+```powershell
+# bump version, commit, then tag
+git tag v1.0.0
+git push origin v1.0.0       # private repo
+git push personal v1.0.0     # public repo
+```
+
+GitHub Actions runs `pac solution pack` for both **Managed** and **Unmanaged**,
+attaches both zips to a draft GitHub Release, then opens for review. Edit the
+release notes on GitHub and click **Publish** to make it visible.
+
+To dry-run without tagging, use the workflow's **Run workflow** button on the
+Actions tab — it produces the zips as build artifacts instead of a release.
 
 ## Tooling (`tools/` at repo root)
 

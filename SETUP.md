@@ -64,39 +64,43 @@ their behalf.
 
 Two paths — pick one:
 
-### 2a. Quick install (prebuilt zip)
+### 2a. Quick install (download from Releases)
 
-For users who just want to install without building from source. Both zips are
-committed in `power-platform/solution/`:
+For users who just want to install without building from source:
+
+1. Go to the repo's **Releases** page:
+   - https://github.com/blob150/dataverse-storage-report/releases
+2. Download the latest `DataverseStorageReport_managed.zip` (or
+   `_unmanaged.zip` if you need to customise the components).
+3. Import it:
+
+   ```powershell
+   pac auth select --name <profile pointing at target env>
+   pac solution import `
+     --path .\DataverseStorageReport_managed.zip `
+     --activate-plugins `
+     --publish-changes
+   ```
 
 | File                                       | When to use                                                     |
 |--------------------------------------------|-----------------------------------------------------------------|
 | `DataverseStorageReport_unmanaged.zip`     | Dev / customisation environments. Components are editable.     |
 | `DataverseStorageReport_managed.zip`       | Production. Components are locked; uninstall removes cleanly.  |
 
-```powershell
-cd <repo root>
-pac auth select --name <profile pointing at target env>
-pac solution import `
-  --path power-platform\solution\DataverseStorageReport_managed.zip `
-  --activate-plugins `
-  --publish-changes
-```
-
 ### 2b. Build from source
 
-For developers iterating on the solution shape. The solution source is in
+For developers iterating on the solution shape. Source is in
 `power-platform/solution/src/` — pack it, then import.
 
 ```powershell
 cd <repo root>
 pac auth select --name <profile pointing at target env>
 pac solution pack `
-  --zipfile power-platform\solution\DataverseStorageReport_unmanaged.zip `
+  --zipfile DataverseStorageReport_unmanaged.zip `
   --folder  power-platform\solution\src `
   --packagetype Unmanaged
 pac solution import `
-  --path power-platform\solution\DataverseStorageReport_unmanaged.zip `
+  --path .\DataverseStorageReport_unmanaged.zip `
   --activate-plugins `
   --publish-changes
 ```

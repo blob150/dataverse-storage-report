@@ -28,12 +28,9 @@ dist-ssr
 .env.*
 !.env.example
 
-# Power Platform exported solution zips
-# (Both _managed and _unmanaged zips ARE committed for one-click install.
-# Other zips, e.g. ad-hoc exports, stay ignored.)
+# Power Platform exported solution zips (built by GitHub Actions on tag push;
+# distributed via GitHub Releases — see .github/workflows/release.yml)
 power-platform/solution/*.zip
-!power-platform/solution/DataverseStorageReport_managed.zip
-!power-platform/solution/DataverseStorageReport_unmanaged.zip
 
 # Bundled code app assets inside unpacked solution (rebuilt via `pac code push` from src/)
 power-platform/solution/src/CanvasApps/*_CodeAppPackages/

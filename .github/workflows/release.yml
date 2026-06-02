@@ -1,0 +1,85 @@
+name: Release
+
+# Builds the Dataverse Storage Report solution from `power-platform/solution/src/`
+# and publishes managed + unmanaged zips to a GitHub Release whenever a tag
+# matching `v*` (e.g. `v1.0.0`) is pushed.
+#
+# Usage:
+#   git tag v1.0.0
+#   git push origin v1.0.0     (or: git push personal v1.0.0)
+#
+# A draft release is created on first run; edit it on GitHub to publish.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a manual run (e.g. v1.0.0-test)'
+        required: true
+        default: 'v0.0.0-manual'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Power Platform CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building $VERSION"
+
+      - name: Pack unmanaged solution
+        run: |
+          pac solution pack \
+            --zipfile DataverseStorageReport_unmanaged.zip \
+            --folder  power-platform/solution/src \
+            --packagetype Unmanaged
+
+      - name: Pack managed solution
+        run: |
+          pac solution pack \
+            --zipfile DataverseStorageReport_managed.zip \
+            --folder  power-platform/solution/src \
+            --packagetype Managed
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.version }}
+          name: ${{ steps.ver.outputs.version }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            DataverseStorageReport_unmanaged.zip
+            DataverseStorageReport_managed.zip
+
+      - name: Upload artifacts (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: solution-${{ steps.ver.outputs.version }}
+          path: |
+            DataverseStorageReport_unmanaged.zip
+            DataverseStorageReport_managed.zip
