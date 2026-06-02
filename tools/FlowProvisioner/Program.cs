@@ -44,22 +44,71 @@ if (!service.IsReady)
 }
 Console.WriteLine($"Connected to {DataverseUrl}");
 
+// --pull mode: download the current clientdata of the deployed flow into flow-definition.json
+// so we capture any manual edits made via the maker portal.
+if (args.Contains("--pull"))
+{
+    var qd = new QueryExpression("workflow")
+    {
+        ColumnSet = new ColumnSet("workflowid", "name", "uniquename", "clientdata", "statecode"),
+        Criteria = new FilterExpression
+        {
+            Conditions = { new ConditionExpression("uniquename", ConditionOperator.Equal, "dsr_ingestdataversecapacity") }
+        }
+    };
+    var rows = service.RetrieveMultiple(qd).Entities;
+    if (rows.Count == 0) { Console.WriteLine("No workflow with uniquename dsr_ingestdataversecapacity found."); return; }
+    var wf = rows.OrderByDescending(r => r.Contains("statecode") && ((OptionSetValue)r["statecode"]).Value == 1).First();
+    var pulled = wf.GetAttributeValue<string>("clientdata") ?? "";
+    // Pretty-print so it diffs cleanly in git.
+    using var doc = JsonDocument.Parse(pulled);
+    var pretty = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+    var sourcePath = Path.GetFullPath(Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "power-platform", "flows", "dsr-ingest-capacity", "flow-definition.json"));
+    var localPath = Path.Combine(System.AppContext.BaseDirectory, "flow-definition.json");
+    File.WriteAllText(sourcePath, pretty);
+    File.WriteAllText(localPath, pretty);
+    Console.WriteLine($"Pulled {pretty.Length} chars of clientdata from workflow {wf.Id}.");
+    Console.WriteLine($"  Wrote: {sourcePath}");
+    Console.WriteLine($"  Wrote: {localPath}");
+    return;
+}
+
+// --list-envvars mode: dump schema name + display name of all dsr_ env var definitions and exit.
+if (args.Contains("--list-envvars"))
+{
+    var qd = new QueryExpression("environmentvariabledefinition")
+    {
+        ColumnSet = new ColumnSet("schemaname", "displayname", "type"),
+        Criteria = new FilterExpression
+        {
+            Conditions = { new ConditionExpression("schemaname", ConditionOperator.BeginsWith, "dsr_") }
+        }
+    };
+    var rows = service.RetrieveMultiple(qd).Entities;
+    Console.WriteLine($"Found {rows.Count} dsr_ env var definitions:");
+    foreach (var r in rows)
+    {
+        var schema = r.GetAttributeValue<string>("schemaname");
+        var disp = r.GetAttributeValue<string>("displayname");
+        var typ = r.Contains("type") ? r.FormattedValues["type"] : "";
+        Console.WriteLine($"  {schema} | display='{disp}' | type='{typ}'");
+    }
+    return;
+}
+
 var solutionId = GetSolutionId(service, SolutionUniqueName)
     ?? throw new InvalidOperationException($"Solution '{SolutionUniqueName}' not found. Run DataverseProvisioner first.");
 Console.WriteLine($"Solution {SolutionUniqueName} = {solutionId}");
 
-// 1. Connection references (created in Dataverse; user adds them to the solution
+// 1. Connection reference (created in Dataverse; user adds it to the solution
 // from the maker portal — programmatic solution add is unreliable for this type).
-var httpRef = EnsureConnectionReference(service, "dsr_sharedhttp",
-    "DSR Shared HTTP", "/providers/Microsoft.PowerApps/apis/shared_http");
-
 var cdsRef = EnsureConnectionReference(service, "dsr_shareddataverse",
     "DSR Shared Dataverse", "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps");
 
 // 2. Workflow (cloud flow) as Draft
 var workflowId = EnsureWorkflow(service, "dsr_ingestdataversecapacity",
     "Ingest Dataverse storage capacity",
-    "Pulls per-environment Dataverse capacity from BAP admin APIs and upserts dsr_environment / dsr_storagesnapshot / dsr_tenantpool rows. Open in Power Automate to bind connections and turn on.",
+    "Pulls per-environment Dataverse capacity from BAP admin APIs and upserts dsr_environment / dsr_storagesnapshot / dsr_tenantpool rows. Open in Power Automate to bind the Dataverse connection and turn on.",
     clientData);
 AddToSolution(service, workflowId, ComponentType_Workflow, SolutionUniqueName);
 
@@ -75,16 +124,14 @@ catch (Exception ex)
 Console.WriteLine();
 Console.WriteLine("Flow provisioning complete.");
 Console.WriteLine($"  Workflow ID: {workflowId}");
-Console.WriteLine($"  HTTP connection reference: {httpRef}");
 Console.WriteLine($"  Dataverse connection reference: {cdsRef}");
 Console.WriteLine();
 Console.WriteLine("Next steps in Power Automate (make.powerautomate.com):");
 Console.WriteLine("  1. Open solution 'DataverseStorageReport' and edit the new flow.");
-Console.WriteLine("  2. Bind 'DSR Shared HTTP' to a connection (premium HTTP).");
-Console.WriteLine("  3. Bind 'DSR Shared Dataverse' to a connection that can write dsr_* tables.");
-Console.WriteLine("  4. Set environment variable values: dsr_TenantId, dsr_AdminClientId,");
+Console.WriteLine("  2. Bind 'DSR Shared Dataverse' to a connection that can write dsr_* tables.");
+Console.WriteLine("  3. Set environment variable values: dsr_TenantId, dsr_AdminClientId,");
 Console.WriteLine("     dsr_AdminClientSecret, dsr_BapApiVersion, dsr_HistoryRetentionDays.");
-Console.WriteLine("  5. Save & Turn on. Optional: add a Recurrence trigger for daily refresh.");
+Console.WriteLine("  4. Save & Turn on.");
 return;
 
 static Guid? GetSolutionId(IOrganizationService svc, string uniqueName)
@@ -141,13 +188,41 @@ static Guid EnsureWorkflow(IOrganizationService svc, string uniqueName, string n
                 new ConditionExpression("type", ConditionOperator.Equal, 1),
             },
         },
-        TopCount = 1,
     };
-    var existing = svc.RetrieveMultiple(q).Entities.FirstOrDefault();
+    var matches = svc.RetrieveMultiple(q).Entities;
+
+    // If multiple drafts accumulated (from prior recreate cycles), prune extras
+    if (matches.Count > 1)
+    {
+        Console.WriteLine($"Found {matches.Count} workflow rows for {uniqueName}; pruning duplicates.");
+        foreach (var dup in matches.Skip(1))
+        {
+            try { svc.Delete("workflow", dup.Id); Console.WriteLine($"  Deleted duplicate: {dup.Id}"); }
+            catch (Exception dx) { Console.WriteLine($"  Could not delete {dup.Id}: {dx.Message.Split('\n')[0]}"); }
+        }
+    }
+    var existing = matches.FirstOrDefault();
     if (existing != null)
     {
-        Console.WriteLine($"Workflow already exists (no update): {uniqueName}");
-        return existing.Id;
+        var upd = new Entity("workflow", existing.Id)
+        {
+            ["clientdata"] = clientData,
+            ["description"] = description,
+        };
+        try
+        {
+            svc.Update(upd);
+            Console.WriteLine($"Updated workflow: {uniqueName}");
+            return existing.Id;
+        }
+        catch (Exception ex) when (ex.Message.Contains("0x80060467") || ex.Message.Contains("0x80040203") || ex.Message.Contains("connection references") || ex.Message.Contains("ActiveUnpublished"))
+        {
+            // Dataverse blocks workflow updates when connection refs are unbound,
+            // or when the row is in ActiveUnpublished (draft) state.
+            // Fall back to delete+recreate so the new clientdata actually lands.
+            Console.WriteLine($"Update blocked ({ex.Message.Split('\n')[0]}). Recreating workflow: {uniqueName}");
+            svc.Delete("workflow", existing.Id);
+        }
     }
 
     var wf = new Entity("workflow")

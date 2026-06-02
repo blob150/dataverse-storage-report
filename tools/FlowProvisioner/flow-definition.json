@@ -1,15 +1,6 @@
 {
   "properties": {
     "connectionReferences": {
-      "shared_http": {
-        "runtimeSource": "embedded",
-        "connection": {
-          "connectionReferenceLogicalName": "dsr_sharedhttp"
-        },
-        "api": {
-          "name": "shared_http"
-        }
-      },
       "shared_commondataserviceforapps": {
         "runtimeSource": "embedded",
         "connection": {
@@ -34,84 +25,51 @@
         }
       },
       "triggers": {
-        "manual": {
+        "Recurrence": {
           "metadata": {
             "operationMetadataId": "00000000-0000-0000-0000-000000000001"
           },
-          "type": "Request",
-          "kind": "Http",
-          "inputs": {
-            "schema": {}
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "startTime": "2026-05-28T08:00:00Z",
+            "timeZone": "Eastern Standard Time",
+            "schedule": {
+              "hours": [
+                "4"
+              ],
+              "minutes": [
+                0
+              ]
+            }
           }
         }
       },
       "actions": {
-        "Get_BAP_admin_token": {
-          "runAfter": {},
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000010"
-          },
-          "type": "Http",
-          "inputs": {
-            "method": "POST",
-            "uri": "https://login.microsoftonline.com/@{environment('dsr_TenantId')}/oauth2/v2.0/token",
-            "headers": {
-              "Content-Type": "application/x-www-form-urlencoded"
-            },
-            "body": "client_id=@{environment('dsr_AdminClientId')}&client_secret=@{environment('dsr_AdminClientSecret')}&scope=https%3A%2F%2Fapi.bap.microsoft.com%2F.default&grant_type=client_credentials"
-          },
-          "runtimeConfiguration": {
-            "secureData": {
-              "properties": [
-                "inputs",
-                "outputs"
-              ]
-            }
-          }
-        },
-        "Parse_token_response": {
-          "runAfter": {
-            "Get_BAP_admin_token": [
-              "Succeeded"
-            ]
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000011"
-          },
-          "type": "ParseJson",
-          "inputs": {
-            "content": "@body('Get_BAP_admin_token')",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "access_token": {
-                  "type": "string"
-                },
-                "expires_in": {
-                  "type": "integer"
-                },
-                "token_type": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
         "List_environments": {
-          "runAfter": {
-            "Parse_token_response": [
-              "Succeeded"
-            ]
-          },
+          "runAfter": {},
           "metadata": {
             "operationMetadataId": "00000000-0000-0000-0000-000000000020"
           },
           "type": "Http",
           "inputs": {
             "method": "GET",
-            "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=@{environment('dsr_BapApiVersion')}",
-            "headers": {
-              "Authorization": "Bearer @{body('Parse_token_response')?['access_token']}"
+            "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=@{parameters('DSR BAP API Version (dsr_BapApiVersion)')}",
+            "authentication": {
+              "type": "ActiveDirectoryOAuth",
+              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+              "audience": "https://api.bap.microsoft.com/",
+              "authority": "https://login.microsoftonline.com",
+              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+              "secret": "REPLACE_WITH_CLIENT_SECRET"
+            }
+          },
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "inputs"
+              ]
             }
           }
         },
@@ -163,46 +121,9 @@
           "type": "Foreach",
           "foreach": "@body('Parse_environments_response')?['value']",
           "actions": {
-            "Get_capacity_consumption": {
-              "runAfter": {},
-              "metadata": {
-                "operationMetadataId": "00000000-0000-0000-0000-000000000031"
-              },
-              "type": "Http",
-              "inputs": {
-                "method": "GET",
-                "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/@{items('For_each_environment')?['name']}/capacityConsumption?api-version=@{environment('dsr_BapApiVersion')}",
-                "headers": {
-                  "Authorization": "Bearer @{body('Parse_token_response')?['access_token']}"
-                }
-              }
-            },
-            "Parse_capacity_response": {
-              "runAfter": {
-                "Get_capacity_consumption": [
-                  "Succeeded",
-                  "Failed"
-                ]
-              },
-              "metadata": {
-                "operationMetadataId": "00000000-0000-0000-0000-000000000032"
-              },
-              "type": "ParseJson",
-              "inputs": {
-                "content": "@body('Get_capacity_consumption')",
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "properties": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            },
             "Upsert_environment": {
               "runAfter": {
-                "Parse_capacity_response": [
+                "If_owner_id_present": [
                   "Succeeded"
                 ]
               },
@@ -214,21 +135,21 @@
                 "host": {
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
                   "connectionName": "shared_commondataserviceforapps",
-                  "operationId": "UpdateRecordWithAlternateKey"
+                  "operationId": "UpdateRecord"
                 },
                 "parameters": {
                   "entityName": "dsr_environments",
-                  "alternateKeyName": "dsr_environmentguid",
-                  "alternateKeyValue": "@{items('For_each_environment')?['name']}",
                   "item/dsr_name": "@{items('For_each_environment')?['properties']?['displayName']}",
                   "item/dsr_displayname": "@{items('For_each_environment')?['properties']?['displayName']}",
                   "item/dsr_type": "@{items('For_each_environment')?['properties']?['environmentSku']}",
                   "item/dsr_region": "@{items('For_each_environment')?['properties']?['azureRegion']}",
-                  "item/dsr_owneremail": "@{items('For_each_environment')?['properties']?['createdBy']?['email']}",
-                  "item/dsr_ownername": "@{items('For_each_environment')?['properties']?['createdBy']?['displayName']}",
+                  "item/dsr_owneremail": "@{coalesce(body('Parse_owner_user')?['mail'], body('Parse_owner_user')?['userPrincipalName'], 'System')}",
+                  "item/dsr_ownername": "@{coalesce(body('Parse_owner_user')?['displayName'], 'System')}",
                   "item/dsr_billingmodel": "@{if(equals(items('For_each_environment')?['properties']?['billingPolicy']?['billingPolicyType'], 'PayAsYouGo'), 'PayAsYouGo', 'License')}",
                   "item/dsr_paygosubscriptionid": "@{items('For_each_environment')?['properties']?['billingPolicy']?['azureSubscriptionId']}",
-                  "item/dsr_url": "@{items('For_each_environment')?['properties']?['linkedEnvironmentMetadata']?['instanceUrl']}"
+                  "item/dsr_url": "@{items('For_each_environment')?['properties']?['linkedEnvironmentMetadata']?['instanceUrl']}",
+                  "recordId": "@{if(startsWith(items('For_each_environment')?['name'], 'Default-'), substring(items('For_each_environment')?['name'], 8, sub(length(items('For_each_environment')?['name']), 8)), items('For_each_environment')?['name'])}",
+                  "item/dsr_environmentguid": "@{items('For_each_environment')?['name']}"
                 },
                 "authentication": "@parameters('$authentication')"
               }
@@ -236,6 +157,15 @@
             "Add_storage_snapshot": {
               "runAfter": {
                 "Upsert_environment": [
+                  "Succeeded"
+                ],
+                "Filter_Database": [
+                  "Succeeded"
+                ],
+                "Filter_File": [
+                  "Succeeded"
+                ],
+                "Filter_Log": [
                   "Succeeded"
                 ]
               },
@@ -252,72 +182,317 @@
                 "parameters": {
                   "entityName": "dsr_storagesnapshots",
                   "item/dsr_name": "@{items('For_each_environment')?['properties']?['displayName']} @{utcNow()}",
-                  "item/dsr_environment@odata.bind": "/dsr_environments(dsr_environmentguid='@{items('For_each_environment')?['name']}')",
                   "item/dsr_capturedat": "@{utcNow()}",
-                  "item/dsr_dballocatedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['database']?['allocatedGb'], 0)}",
-                  "item/dsr_dbusedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['database']?['usedGb'], 0)}",
-                  "item/dsr_fileallocatedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['file']?['allocatedGb'], 0)}",
-                  "item/dsr_fileusedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['file']?['usedGb'], 0)}",
-                  "item/dsr_logallocatedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['log']?['allocatedGb'], 0)}",
-                  "item/dsr_logusedgb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['log']?['usedGb'], 0)}",
-                  "item/dsr_paygoenabled": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['payAsYouGo']?['enabled'], false)}",
-                  "item/dsr_paygoconsumptiongb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['payAsYouGo']?['currentConsumptionGb'], 0)}",
-                  "item/dsr_overagegb": "@{coalesce(body('Parse_capacity_response')?['properties']?['dataverseCapacityConsumption']?['overageGb'], 0)}"
+                  "item/dsr_dballocatedgb": "@div(mul(coalesce(first(body('Filter_Database'))?['entitlement']?['capacity']?['allocated']?['value'], 0), 1.0), 1024.0)",
+                  "item/dsr_dbusedgb": "@div(mul(coalesce(first(body('Filter_Database'))?['entitlement']?['capacity']?['consumed']?['value'], 0), 1.0), 1024.0)",
+                  "item/dsr_fileallocatedgb": "@div(mul(coalesce(first(body('Filter_File'))?['entitlement']?['capacity']?['allocated']?['value'], 0), 1.0), 1024.0)",
+                  "item/dsr_fileusedgb": "@div(mul(coalesce(first(body('Filter_File'))?['entitlement']?['capacity']?['consumed']?['value'], 0), 1.0), 1024.0)",
+                  "item/dsr_logallocatedgb": "@div(mul(coalesce(first(body('Filter_Log'))?['entitlement']?['capacity']?['allocated']?['value'], 0), 1.0), 1024.0)",
+                  "item/dsr_logusedgb": "@div(mul(coalesce(first(body('Filter_Log'))?['entitlement']?['capacity']?['consumed']?['value'], 0), 1.0), 1024.0)",
+                  "item/dsr_paygoenabled": "@or(or(greater(coalesce(first(body('Filter_Database'))?['entitlement']?['payGo']?['entitled']?['value'], 0), 0), greater(coalesce(first(body('Filter_File'))?['entitlement']?['payGo']?['entitled']?['value'], 0), 0)), greater(coalesce(first(body('Filter_Log'))?['entitlement']?['payGo']?['entitled']?['value'], 0), 0))",
+                  "item/dsr_paygoconsumptiongb": "@div(mul(add(add(coalesce(first(body('Filter_Database'))?['entitlement']?['payGo']?['consumed']?['value'], 0), coalesce(first(body('Filter_File'))?['entitlement']?['payGo']?['consumed']?['value'], 0)), coalesce(first(body('Filter_Log'))?['entitlement']?['payGo']?['consumed']?['value'], 0)), 1.0), 1024.0)",
+                  "item/dsr_overagegb": "@div(mul(add(add(if(less(coalesce(first(body('Filter_Database'))?['entitlement']?['capacity']?['availableQuantity'], 0), 0), mul(coalesce(first(body('Filter_Database'))?['entitlement']?['capacity']?['availableQuantity'], 0), -1), 0), if(less(coalesce(first(body('Filter_File'))?['entitlement']?['capacity']?['availableQuantity'], 0), 0), mul(coalesce(first(body('Filter_File'))?['entitlement']?['capacity']?['availableQuantity'], 0), -1), 0)), if(less(coalesce(first(body('Filter_Log'))?['entitlement']?['capacity']?['availableQuantity'], 0), 0), mul(coalesce(first(body('Filter_Log'))?['entitlement']?['capacity']?['availableQuantity'], 0), -1), 0)), 1.0), 1024.0)",
+                  "item/dsr_Environment@odata.bind": "/dsr_environments(@{if(startsWith(items('For_each_environment')?['name'], 'Default-'), substring(items('For_each_environment')?['name'], 8, sub(length(items('For_each_environment')?['name']), 8)), items('For_each_environment')?['name'])})"
                 },
                 "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Get_Database_entitlement": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000200"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/environments/entitlements/Database?searchRequest=', encodeUriComponent(items('For_each_environment')?['properties']?['displayName']))}",
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+                  "audience": "https://licensing.powerplatform.microsoft.com/",
+                  "authority": "https://login.microsoftonline.com",
+                  "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+                  "secret": "REPLACE_WITH_CLIENT_SECRET"
+                }
+              },
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [
+                    "inputs"
+                  ]
+                }
+              }
+            },
+            "Parse_Database_entitlement": {
+              "runAfter": {
+                "Get_Database_entitlement": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000210"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@body('Get_Database_entitlement')",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            },
+            "Filter_Database": {
+              "runAfter": {
+                "Parse_Database_entitlement": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000220"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@coalesce(body('Parse_Database_entitlement')?['value'], json('[]'))",
+                "where": "@equals(toLower(item()?['environmentId']), toLower(items('For_each_environment')?['name']))"
+              }
+            },
+            "Get_File_entitlement": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000201"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/environments/entitlements/File?searchRequest=', encodeUriComponent(items('For_each_environment')?['properties']?['displayName']))}",
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+                  "audience": "https://licensing.powerplatform.microsoft.com/",
+                  "authority": "https://login.microsoftonline.com",
+                  "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+                  "secret": "REPLACE_WITH_CLIENT_SECRET"
+                }
+              },
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [
+                    "inputs"
+                  ]
+                }
+              }
+            },
+            "Parse_File_entitlement": {
+              "runAfter": {
+                "Get_File_entitlement": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000211"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@body('Get_File_entitlement')",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            },
+            "Filter_File": {
+              "runAfter": {
+                "Parse_File_entitlement": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000221"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@coalesce(body('Parse_File_entitlement')?['value'], json('[]'))",
+                "where": "@equals(toLower(item()?['environmentId']), toLower(items('For_each_environment')?['name']))"
+              }
+            },
+            "Get_Log_entitlement": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000202"
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/environments/entitlements/Log?searchRequest=', encodeUriComponent(items('For_each_environment')?['properties']?['displayName']))}",
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+                  "audience": "https://licensing.powerplatform.microsoft.com/",
+                  "authority": "https://login.microsoftonline.com",
+                  "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+                  "secret": "REPLACE_WITH_CLIENT_SECRET"
+                }
+              },
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [
+                    "inputs"
+                  ]
+                }
+              }
+            },
+            "Parse_Log_entitlement": {
+              "runAfter": {
+                "Get_Log_entitlement": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000212"
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@body('Get_Log_entitlement')",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            },
+            "Filter_Log": {
+              "runAfter": {
+                "Parse_Log_entitlement": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000222"
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@coalesce(body('Parse_Log_entitlement')?['value'], json('[]'))",
+                "where": "@equals(toLower(item()?['environmentId']), toLower(items('For_each_environment')?['name']))"
+              }
+            },
+            "If_owner_id_present": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "00000000-0000-0000-0000-000000000300"
+              },
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@coalesce(items('For_each_environment')?['properties']?['createdBy']?['id'], '')",
+                        ""
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Get_owner_user": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "00000000-0000-0000-0000-000000000301"
+                  },
+                  "type": "Http",
+                  "inputs": {
+                    "method": "GET",
+                    "uri": "@{concat('https://graph.microsoft.com/v1.0/users/', items('For_each_environment')?['properties']?['createdBy']?['id'], '?$select=displayName,mail,userPrincipalName')}",
+                    "authentication": {
+                      "type": "ActiveDirectoryOAuth",
+                      "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+                      "audience": "https://graph.microsoft.com",
+                      "authority": "https://login.microsoftonline.com",
+                      "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+                      "secret": "REPLACE_WITH_CLIENT_SECRET"
+                    }
+                  },
+                  "runtimeConfiguration": {
+                    "secureData": {
+                      "properties": [
+                        "inputs"
+                      ]
+                    },
+                    "retryPolicy": {
+                      "type": "none"
+                    }
+                  }
+                },
+                "Parse_owner_user": {
+                  "runAfter": {
+                    "Get_owner_user": [
+                      "Succeeded",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "00000000-0000-0000-0000-000000000302"
+                  },
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@coalesce(body('Get_owner_user'), json('{}'))",
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "displayName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "mail": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "userPrincipalName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
               }
             }
           },
           "runtimeConfiguration": {
             "concurrency": {
-              "repetitions": 10
-            }
-          }
-        },
-        "Get_tenant_capacity": {
-          "runAfter": {
-            "For_each_environment": [
-              "Succeeded"
-            ]
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000040"
-          },
-          "type": "Http",
-          "inputs": {
-            "method": "GET",
-            "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/tenantCapacity?api-version=@{environment('dsr_BapApiVersion')}",
-            "headers": {
-              "Authorization": "Bearer @{body('Parse_token_response')?['access_token']}"
-            }
-          }
-        },
-        "Parse_tenant_capacity_response": {
-          "runAfter": {
-            "Get_tenant_capacity": [
-              "Succeeded",
-              "Failed"
-            ]
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000041"
-          },
-          "type": "ParseJson",
-          "inputs": {
-            "content": "@body('Get_tenant_capacity')",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "properties": {
-                  "type": "object"
-                }
-              }
+              "repetitions": 20
             }
           }
         },
         "Add_tenant_pool_snapshot": {
           "runAfter": {
-            "Parse_tenant_capacity_response": [
+            "Parse_tenant_Database": [
+              "Succeeded"
+            ],
+            "Parse_tenant_File": [
+              "Succeeded"
+            ],
+            "Parse_tenant_Log": [
               "Succeeded"
             ]
           },
@@ -335,10 +510,10 @@
               "entityName": "dsr_tenantpools",
               "item/dsr_name": "Tenant pool @{utcNow()}",
               "item/dsr_capturedat": "@{utcNow()}",
-              "item/dsr_totalallocatedgb": "@{coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['allocatedGb'], 0)}",
-              "item/dsr_totalusedgb": "@{coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['usedGb'], 0)}",
-              "item/dsr_availablegb": "@{sub(coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['allocatedGb'], 0), coalesce(body('Parse_tenant_capacity_response')?['properties']?['database']?['usedGb'], 0))}",
-              "item/dsr_paygoaccrualgb": "@{coalesce(body('Parse_tenant_capacity_response')?['properties']?['payAsYouGo']?['currentConsumptionGb'], 0)}"
+              "item/dsr_totalallocatedgb": "@{div(mul(add(add(coalesce(body('Parse_tenant_Database')?['entitlement']?['capacity']?['allocated']?['value'], 0), coalesce(body('Parse_tenant_File')?['entitlement']?['capacity']?['allocated']?['value'], 0)), coalesce(body('Parse_tenant_Log')?['entitlement']?['capacity']?['allocated']?['value'], 0)), 1.0), 1024.0)}",
+              "item/dsr_totalusedgb": "@{div(mul(add(add(coalesce(body('Parse_tenant_Database')?['entitlement']?['capacity']?['consumed']?['value'], 0), coalesce(body('Parse_tenant_File')?['entitlement']?['capacity']?['consumed']?['value'], 0)), coalesce(body('Parse_tenant_Log')?['entitlement']?['capacity']?['consumed']?['value'], 0)), 1.0), 1024.0)}",
+              "item/dsr_availablegb": "@{div(mul(add(add(coalesce(body('Parse_tenant_Database')?['entitlement']?['capacity']?['availableQuantity'], 0), coalesce(body('Parse_tenant_File')?['entitlement']?['capacity']?['availableQuantity'], 0)), coalesce(body('Parse_tenant_Log')?['entitlement']?['capacity']?['availableQuantity'], 0)), 1.0), 1024.0)}",
+              "item/dsr_paygoaccrualgb": "@{div(mul(add(add(coalesce(body('Parse_tenant_Database')?['entitlement']?['payGo']?['consumed']?['value'], 0), coalesce(body('Parse_tenant_File')?['entitlement']?['payGo']?['consumed']?['value'], 0)), coalesce(body('Parse_tenant_Log')?['entitlement']?['payGo']?['consumed']?['value'], 0)), 1.0), 1024.0)}"
             },
             "authentication": "@parameters('$authentication')"
           }
@@ -363,7 +538,7 @@
             },
             "parameters": {
               "entityName": "dsr_storagesnapshots",
-              "$filter": "dsr_capturedat lt @{addDays(utcNow(), mul(-1, int(environment('dsr_HistoryRetentionDays'))))}",
+              "$filter": "dsr_capturedat lt @{addDays(utcNow(), mul(-1, int(parameters('DSR History Retention Days (dsr_HistoryRetentionDays)'))))}",
               "$select": "dsr_storagesnapshotid"
             },
             "authentication": "@parameters('$authentication')"
@@ -405,6 +580,162 @@
             "concurrency": {
               "repetitions": 20
             }
+          }
+        },
+        "Get_tenant_Database": {
+          "runAfter": {
+            "For_each_environment": [
+              "Succeeded"
+            ]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "GET",
+            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/Database')}",
+            "authentication": {
+              "type": "ActiveDirectoryOAuth",
+              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+              "audience": "https://licensing.powerplatform.microsoft.com/",
+              "authority": "https://login.microsoftonline.com",
+              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+              "secret": "REPLACE_WITH_CLIENT_SECRET"
+            }
+          },
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "inputs"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000100"
+          }
+        },
+        "Parse_tenant_Database": {
+          "runAfter": {
+            "Get_tenant_Database": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_tenant_Database')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "entitlement": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000101"
+          }
+        },
+        "Get_tenant_File": {
+          "runAfter": {
+            "For_each_environment": [
+              "Succeeded"
+            ]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "GET",
+            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/File')}",
+            "authentication": {
+              "type": "ActiveDirectoryOAuth",
+              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+              "audience": "https://licensing.powerplatform.microsoft.com/",
+              "authority": "https://login.microsoftonline.com",
+              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+              "secret": "REPLACE_WITH_CLIENT_SECRET"
+            }
+          },
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "inputs"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000102"
+          }
+        },
+        "Parse_tenant_File": {
+          "runAfter": {
+            "Get_tenant_File": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_tenant_File')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "entitlement": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000103"
+          }
+        },
+        "Get_tenant_Log": {
+          "runAfter": {
+            "For_each_environment": [
+              "Succeeded"
+            ]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "GET",
+            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/Log')}",
+            "authentication": {
+              "type": "ActiveDirectoryOAuth",
+              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+              "audience": "https://licensing.powerplatform.microsoft.com/",
+              "authority": "https://login.microsoftonline.com",
+              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+              "secret": "REPLACE_WITH_CLIENT_SECRET"
+            }
+          },
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "inputs"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000104"
+          }
+        },
+        "Parse_tenant_Log": {
+          "runAfter": {
+            "Get_tenant_Log": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_tenant_Log')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "entitlement": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000105"
           }
         }
       },
