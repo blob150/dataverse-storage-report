@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Workflow WorkflowId="{71813f52-5a5d-f111-a826-6045bd0494ec}" Name="Ingest Dataverse storage capacity" Description="Pulls per-environment Dataverse capacity from BAP admin APIs and upserts dsr_environment / dsr_storagesnapshot / dsr_tenantpool rows. Open in Power Automate to bind the Dataverse connection and turn on." xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <JsonFileName>/Workflows/IngestDataversestoragecapacity-71813F52-5A5D-F111-A826-6045BD0494EC.json</JsonFileName>
+  <Type>1</Type>
+  <Subprocess>0</Subprocess>
+  <Category>5</Category>
+  <Mode>0</Mode>
+  <Scope>4</Scope>
+  <OnDemand>0</OnDemand>
+  <TriggerOnCreate>0</TriggerOnCreate>
+  <TriggerOnDelete>0</TriggerOnDelete>
+  <AsyncAutodelete>0</AsyncAutodelete>
+  <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+  <StateCode>1</StateCode>
+  <StatusCode>2</StatusCode>
+  <RunAs>1</RunAs>
+  <UniqueName>dsr_ingestdataversecapacity</UniqueName>
+  <IsTransacted>1</IsTransacted>
+  <IntroducedVersion>1.0</IntroducedVersion>
+  <IsCustomizable>1</IsCustomizable>
+  <BusinessProcessType>0</BusinessProcessType>
+  <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+  <ModernFlowType>0</ModernFlowType>
+  <PrimaryEntity>none</PrimaryEntity>
+  <LocalizedNames>
+    <LocalizedName languagecode="1033" description="Ingest Dataverse storage capacity" />
+  </LocalizedNames>
+  <Descriptions>
+    <Description languagecode="1033" description="Pulls per-environment Dataverse capacity from BAP admin APIs and upserts dsr_environment / dsr_storagesnapshot / dsr_tenantpool rows. Open in Power Automate to bind the Dataverse connection and turn on." />
+  </Descriptions>
+</Workflow>

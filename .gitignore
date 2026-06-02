@@ -27,3 +27,22 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Power Platform exported solution zip (derived from solution/src/; unpack to inspect)
+power-platform/solution/*.zip
+
+# Bundled code app assets inside unpacked solution (rebuilt via `pac code push` from src/)
+power-platform/solution/src/CanvasApps/*_CodeAppPackages/
+
+# Cloud flow JSON backups (auto-created by FlowProvisioner before each push)
+power-platform/flows/**/backups/
+
+# CapacityProbe log output
+tools/CapacityProbe/probe*.log
+tools/CapacityProbe/*.log
+
+# Local script backups
+*.bak
+
+# pac CLI workspace
+.pac/

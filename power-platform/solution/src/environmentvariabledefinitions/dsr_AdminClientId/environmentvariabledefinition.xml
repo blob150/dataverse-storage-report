@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="dsr_AdminClientId">
+  <defaultvalue>23426e2c-3cec-48de-8c53-bfe366373c1e</defaultvalue>
+  <description default="App registration (service principal) client ID used to call BAP admin APIs.">
+    <label description="App registration (service principal) client ID used to call BAP admin APIs." languagecode="1033" />
+  </description>
+  <displayname default="DSR Admin Client ID">
+    <label description="DSR Admin Client ID" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

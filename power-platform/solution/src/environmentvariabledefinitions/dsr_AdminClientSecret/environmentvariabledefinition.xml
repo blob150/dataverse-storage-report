@@ -1,0 +1,13 @@
+<environmentvariabledefinition schemaname="dsr_AdminClientSecret">
+  <description default="Secret for the admin service principal. Bind to an Azure Key Vault secret in the maker portal.">
+    <label description="Secret for the admin service principal. Bind to an Azure Key Vault secret in the maker portal." languagecode="1033" />
+  </description>
+  <displayname default="DSR Admin Client Secret">
+    <label description="DSR Admin Client Secret" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000005</type>
+</environmentvariabledefinition>

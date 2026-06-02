@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="dsr_HistoryRetentionDays">
+  <defaultvalue>90</defaultvalue>
+  <description default="Days of dsr_storagesnapshot history to retain. Older rows are pruned by the ingest flow.">
+    <label description="Days of dsr_storagesnapshot history to retain. Older rows are pruned by the ingest flow." languagecode="1033" />
+  </description>
+  <displayname default="DSR History Retention Days">
+    <label description="DSR History Retention Days" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000001</type>
+</environmentvariabledefinition>

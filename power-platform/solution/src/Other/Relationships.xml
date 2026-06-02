@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <EntityRelationship Name="business_unit_dsr_environment" />
+  <EntityRelationship Name="business_unit_dsr_setting" />
+  <EntityRelationship Name="business_unit_dsr_storagesnapshot" />
+  <EntityRelationship Name="business_unit_dsr_tenantpool" />
+  <EntityRelationship Name="dsr_Environment_StorageSnapshot" />
+  <EntityRelationship Name="lk_dsr_environment_createdby" />
+  <EntityRelationship Name="lk_dsr_environment_modifiedby" />
+  <EntityRelationship Name="lk_dsr_setting_createdby" />
+  <EntityRelationship Name="lk_dsr_setting_modifiedby" />
+  <EntityRelationship Name="lk_dsr_storagesnapshot_createdby" />
+  <EntityRelationship Name="lk_dsr_storagesnapshot_modifiedby" />
+  <EntityRelationship Name="lk_dsr_tenantpool_createdby" />
+  <EntityRelationship Name="lk_dsr_tenantpool_modifiedby" />
+  <EntityRelationship Name="owner_dsr_environment" />
+  <EntityRelationship Name="owner_dsr_setting" />
+  <EntityRelationship Name="owner_dsr_storagesnapshot" />
+  <EntityRelationship Name="owner_dsr_tenantpool" />
+  <EntityRelationship Name="team_dsr_environment" />
+  <EntityRelationship Name="team_dsr_setting" />
+  <EntityRelationship Name="team_dsr_storagesnapshot" />
+  <EntityRelationship Name="team_dsr_tenantpool" />
+  <EntityRelationship Name="user_dsr_environment" />
+  <EntityRelationship Name="user_dsr_setting" />
+  <EntityRelationship Name="user_dsr_storagesnapshot" />
+  <EntityRelationship Name="user_dsr_tenantpool" />
+</EntityRelationships>
