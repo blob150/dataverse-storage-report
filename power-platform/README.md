@@ -24,8 +24,9 @@ power-platform/
 ```
 
 Solution zips are not stored in git — `.github/workflows/release.yml` builds
-them from `src/` on every `v*` tag push and publishes both managed and
-unmanaged zips to **GitHub Releases**. End users grab the latest zip from
+them from `src/` on every `v*` tag push and publishes the unmanaged zip
+to **GitHub Releases** (managed zips are out of scope — see "Cutting a
+release" below). End users grab the latest zip from
 the Releases page (see [`../SETUP.md`](../SETUP.md) Step 2a). Source under
 `src/` is the canonical form for diffs and PRs.
 
@@ -106,9 +107,14 @@ git push origin v1.0.0       # private repo
 git push personal v1.0.0     # public repo
 ```
 
-GitHub Actions runs `pac solution pack` for both **Managed** and **Unmanaged**,
-attaches both zips to a draft GitHub Release, then opens for review. Edit the
+GitHub Actions runs `pac solution pack --packagetype Unmanaged`, attaches
+the zip to a draft GitHub Release, then opens for review. Edit the
 release notes on GitHub and click **Publish** to make it visible.
+
+A managed zip is not produced by CI — the canonical source is unmanaged,
+and `pac solution pack` cannot convert it. If a managed zip is required,
+import the unmanaged zip into a dedicated build environment and export
+it from there as managed (Microsoft's recommended ALM flow).
 
 To dry-run without tagging, use the workflow's **Run workflow** button on the
 Actions tab — it produces the zips as build artifacts instead of a release.

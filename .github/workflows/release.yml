@@ -118,12 +118,12 @@ jobs:
             --folder  power-platform/solution/src \
             --packagetype Unmanaged
 
-      - name: Pack managed solution
-        run: |
-          pac solution pack \
-            --zipfile DataverseStorageReport_managed.zip \
-            --folder  power-platform/solution/src \
-            --packagetype Managed
+      # Note: A managed zip is intentionally NOT produced here. Source under
+      # power-platform/solution/src/ is unmanaged (Solution.xml has
+      # <Managed>0</Managed>) and `pac solution pack --packagetype Managed`
+      # rejects unmanaged source. The supported way to obtain a managed zip
+      # is to import the unmanaged zip into a build environment and export
+      # it as managed from there.
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
@@ -135,7 +135,6 @@ jobs:
           generate_release_notes: true
           files: |
             DataverseStorageReport_unmanaged.zip
-            DataverseStorageReport_managed.zip
 
       - name: Upload artifacts (manual run)
         if: github.event_name == 'workflow_dispatch'
@@ -144,4 +143,3 @@ jobs:
           name: solution-${{ steps.ver.outputs.version }}
           path: |
             DataverseStorageReport_unmanaged.zip
-            DataverseStorageReport_managed.zip

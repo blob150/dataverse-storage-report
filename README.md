@@ -122,10 +122,11 @@ allocated quota — they cannot draw from the tenant pool.
 - Solution metadata (tables, env-var defs, workflows, canvas-app reference) lives
   in [`power-platform/solution/src/`](./power-platform/solution/src/) — packed
   via `pac solution pack` for import.
-- **Prebuilt managed + unmanaged solution zips are attached to every GitHub
-  Release** (built automatically by `.github/workflows/release.yml` on `v*`
-  tags). Grab the latest from the
+- **Prebuilt unmanaged solution zip is attached to every GitHub Release**
+  (built automatically by `.github/workflows/release.yml` on `v*` tags).
+  Grab the latest from the
   [Releases page](https://github.com/blob150/dataverse-storage-report/releases)
-  for one-click install.
+  for one-click install. (See [SETUP.md](./SETUP.md) for managed-zip
+  guidance — it's exported from a build environment, not produced by CI.)
 - Tooling and developer notes: [`power-platform/README.md`](./power-platform/README.md).
 - End-to-end install / configure walkthrough: [`SETUP.md`](./SETUP.md).

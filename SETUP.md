@@ -70,22 +70,22 @@ For users who just want to install without building from source:
 
 1. Go to the repo's **Releases** page:
    - https://github.com/blob150/dataverse-storage-report/releases
-2. Download the latest `DataverseStorageReport_managed.zip` (or
-   `_unmanaged.zip` if you need to customise the components).
+2. Download the latest `DataverseStorageReport_unmanaged.zip`.
 3. Import it:
 
    ```powershell
    pac auth select --name <profile pointing at target env>
    pac solution import `
-     --path .\DataverseStorageReport_managed.zip `
+     --path .\DataverseStorageReport_unmanaged.zip `
      --activate-plugins `
      --publish-changes
    ```
 
-| File                                       | When to use                                                     |
-|--------------------------------------------|-----------------------------------------------------------------|
-| `DataverseStorageReport_unmanaged.zip`     | Dev / customisation environments. Components are editable.     |
-| `DataverseStorageReport_managed.zip`       | Production. Components are locked; uninstall removes cleanly.  |
+> **Want a managed zip?** The release pipeline ships only the unmanaged
+> solution because the canonical source under `power-platform/solution/src/`
+> is unmanaged. To produce a managed zip, import the unmanaged zip into a
+> dedicated **build environment** and export it from there as managed —
+> this matches Microsoft's recommended ALM flow.
 
 ### 2b. Build from source
 
