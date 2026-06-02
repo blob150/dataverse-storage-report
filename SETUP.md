@@ -69,7 +69,16 @@ For users who just want to install without building from source:
 1. Go to the repo's **Releases** page:
    - https://github.com/blob150/dataverse-storage-report/releases
 2. Download the latest `DataverseStorageReport_unmanaged.zip`.
-3. Import it:
+3. Import it. Two ways:
+
+   **Option A — Maker portal (no CLI required):**
+   1. Open [make.powerapps.com](https://make.powerapps.com).
+   2. Top-right environment picker → select the target environment.
+   3. Left nav → **Solutions** → **Import solution** → **Browse** →
+      pick `DataverseStorageReport_unmanaged.zip` → **Next** → **Import**.
+   4. Wait for the import to finish (a banner reports success).
+
+   **Option B — Power Platform CLI:**
 
    ```powershell
    pac auth select --name <profile pointing at target env>
