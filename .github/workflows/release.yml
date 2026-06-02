@@ -35,6 +35,12 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install Power Platform CLI
         run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
@@ -48,6 +54,22 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Building $VERSION"
+
+      - name: Build React code app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Stage code app bundle into solution source
+        # `pac solution pack` requires the canvas app's CodeAppPackages folder to
+        # contain the built bundle (index.html + assets/*). The folder is
+        # gitignored, so re-create it from `dist/` on every release.
+        run: |
+          BUNDLE_DIR="power-platform/solution/src/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages"
+          rm -rf "$BUNDLE_DIR"
+          mkdir -p "$BUNDLE_DIR"
+          cp -r dist/. "$BUNDLE_DIR/"
+          ls -la "$BUNDLE_DIR"
 
       - name: Pack unmanaged solution
         run: |
