@@ -57,6 +57,13 @@ This identity makes the BAP / licensing / Microsoft Graph calls inside the flow.
    This is **the** step people miss. Without it, every BAP and licensing
    call returns 401.
 
+> **Does the service principal need a Dataverse application user / role?**
+> No. The flow uses the SP only for outbound HTTP calls to BAP, Licensing,
+> and Graph. All Dataverse reads/writes go through the `shared_commondataserviceforapps`
+> connection (a user-authorized connection — see Step 4). You do **not**
+> need to create an application user or assign a Dataverse security role
+> for the SP in the target environment.
+
 ## Step 2 — Import the solution
 
 Two paths — pick one:
@@ -124,14 +131,22 @@ variables**, set the **Current Value** for each:
 
 ## Step 4 — Authorize the flow's Dataverse connection reference
 
-The flow needs a Dataverse connection (used by the secret-fetch step), and that
-connection must be authorized as a user with `read` on the env-var secret tables.
+Every Dataverse read and write the flow performs (fetching the secret value,
+listing existing snapshots, creating/updating/deleting `dsr_` records) goes
+through one shared Dataverse connection. That connection runs under the
+identity of whoever signs in here.
 
 1. Solutions → Dataverse Storage Report → **Connection references** →
    `DSR Shared Dataverse`.
-2. Click **+ New connection**, sign in with an account that has `System
-   Administrator` (or any role granting read on
-   `environmentvariablevalue` + `environmentvariabledefinition`).
+2. Click **+ New connection**, sign in with an account that has, in the target
+   environment:
+   - **Read** on `environmentvariabledefinition` and `environmentvariablevalue`
+     (so the secret-fetch action works).
+   - **Create / Read / Write / Delete** on the four `dsr_` tables
+     (`dsr_environment`, `dsr_storagesnapshot`, `dsr_tenantpool`, `dsr_setting`).
+
+   The **System Administrator** role covers all of this out of the box. For
+   tighter scopes, create a custom role with just those privileges.
 3. Save the connection reference.
 
 ## Step 5 — Turn on the flow
@@ -168,7 +183,7 @@ create a custom role copying just those table privileges.
 | Import solution / publish customisations   | Dataverse **System Administrator** in target env                              |
 | Register management app                    | **Power Platform Administrator** (tenant role)                                |
 | Grant Graph `User.Read.All` admin consent  | **Application Administrator** or **Global Administrator** (Entra)            |
-| Authorize the flow's Dataverse connection  | Any user with read on `environmentvariablevalue` (typically `System Admin`)  |
+| Authorize the flow's Dataverse connection  | A real user with read on env-var tables and CRUD on the four `dsr_` tables (System Admin works) |
 | End-user runs the report                   | Custom Dataverse role with read on the four `dsr_` tables (write on `dsr_setting`) |
 
 ## Updating after a release
