@@ -47,3 +47,6 @@ tools/CapacityProbe/*.log
 
 # pac CLI workspace
 .pac/
+
+# Per-developer overrides (real tenant/env GUIDs)
+power-platform/test-environment.local.json

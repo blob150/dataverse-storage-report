@@ -7,8 +7,10 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 
-const string DataverseUrl = "https://bprocidatest.crm.dynamics.com/";
-const string TenantId = "1557f771-4c8e-4dbd-8b80-dd00a88e833e";
+string DataverseUrl = Environment.GetEnvironmentVariable("DSR_DATAVERSE_URL")
+    ?? throw new InvalidOperationException("Set DSR_DATAVERSE_URL (e.g. https://<your-org>.crm.dynamics.com/) before running.");
+string TenantId = Environment.GetEnvironmentVariable("DSR_TENANT_ID")
+    ?? throw new InvalidOperationException("Set DSR_TENANT_ID (your Entra tenant GUID) before running.");
 const string DataverseToolingClientId = "51f81489-12ee-4a9e-aaae-a2591f45987d";
 const string SolutionUniqueName = "DataverseStorageReport";
 const string PublisherUniqueName = "DataverseStorageReportPublisher";

@@ -1,5 +1,6 @@
 using System.Text.Json; using Azure.Core; using Azure.Identity;
-var tenantId = "1557f771-4c8e-4dbd-8b80-dd00a88e833e";
+var tenantId = Environment.GetEnvironmentVariable("DSR_TENANT_ID")
+    ?? throw new InvalidOperationException("Set DSR_TENANT_ID (your Entra tenant GUID) before running.");
 var cred = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions { TenantId=tenantId, ClientId="1950a258-227b-4e31-a9cf-717495945fc2", RedirectUri=new Uri("http://localhost") });
 var bapTok = (await cred.GetTokenAsync(new TokenRequestContext(new[]{ "https://api.bap.microsoft.com/.default" }))).Token;
 using var http = new HttpClient();

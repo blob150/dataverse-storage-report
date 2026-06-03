@@ -1,8 +1,12 @@
 using Azure.Core; using Azure.Identity;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk; using Microsoft.Xrm.Sdk.Query;
-var cred = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions { TenantId="1557f771-4c8e-4dbd-8b80-dd00a88e833e", ClientId="51f81489-12ee-4a9e-aaae-a2591f45987d", RedirectUri=new Uri("http://localhost") });
-using var s = new ServiceClient(new Uri("https://bprocidatest.crm.dynamics.com/"), async _ => { var t = await cred.GetTokenAsync(new TokenRequestContext(new[]{ "https://bprocidatest.crm.dynamics.com/.default" })); return t.Token; });
+var tenantId = Environment.GetEnvironmentVariable("DSR_TENANT_ID")
+    ?? throw new InvalidOperationException("Set DSR_TENANT_ID (your Entra tenant GUID) before running.");
+var dataverseUrl = Environment.GetEnvironmentVariable("DSR_DATAVERSE_URL")
+    ?? throw new InvalidOperationException("Set DSR_DATAVERSE_URL (e.g. https://<your-org>.crm.dynamics.com/) before running.");
+var cred = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions { TenantId=tenantId, ClientId="51f81489-12ee-4a9e-aaae-a2591f45987d", RedirectUri=new Uri("http://localhost") });
+using var s = new ServiceClient(new Uri(dataverseUrl), async _ => { var t = await cred.GetTokenAsync(new TokenRequestContext(new[]{ dataverseUrl.TrimEnd('/') + "/.default" })); return t.Token; });
 if (!s.IsReady) throw new Exception(s.LastError);
 var eq = new QueryExpression("dsr_environment") { ColumnSet = new ColumnSet("dsr_environmentid","dsr_environmentguid","dsr_displayname","dsr_type") };
 eq.Criteria.AddCondition("dsr_displayname", ConditionOperator.Like, "%default%");

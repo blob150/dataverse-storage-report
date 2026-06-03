@@ -132,13 +132,20 @@ Actions tab — it produces the zips as build artifacts instead of a release.
 
 ## Test environment
 
-| Setting              | Value                                          |
-|----------------------|------------------------------------------------|
-| Tenant ID            | `1557f771-4c8e-4dbd-8b80-dd00a88e833e`         |
-| Environment ID       | `e0c96096-913f-eec3-8454-d21f7b956608`         |
-| Dataverse URL        | `https://bprocidatest.crm.dynamics.com/`       |
-| Sign-in app reg.     | `23426e2c-3cec-48de-8c53-bfe366373c1e`         |
-| Flow service prin.   | `1da66a9d-9252-4dee-9ee1-9437c3eafdb1`         |
+Local-dev settings live in `test-environment.json`. The committed file ships
+with placeholder values — copy it to `test-environment.local.json`
+(gitignored) and replace each placeholder with your real Entra tenant
+GUID, Power Platform environment GUID, Dataverse URL, and admin-app
+client ID.
+
+The `tools/*` programs read two environment variables at runtime:
+
+```powershell
+$env:DSR_TENANT_ID     = '<your-entra-tenant-guid>'
+$env:DSR_DATAVERSE_URL = 'https://<your-org>.crm.dynamics.com/'
+```
+
+Set these in your shell before running `dotnet run --project tools/<name>`.
 
 For the end-to-end install/configure walkthrough, see
 [`../SETUP.md`](../SETUP.md).
