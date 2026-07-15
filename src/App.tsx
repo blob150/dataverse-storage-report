@@ -174,6 +174,7 @@ export default function App() {
           rows={evaluated}
           settings={settings}
           loading={loading}
+          repo={repo}
         />
       )}
       {tab === 'settings' && (

@@ -72,12 +72,52 @@ export type AppSettings = {
   warnPercent: number
   criticalPercent: number
   defaultEnvironmentTypes: EnvironmentType[]
+  // HTTP-trigger URL for the dsr-gettablestorage flow. Populated post-import
+  // from the flow's "When an HTTP request is received" trigger URL. Empty
+  // means the per-table drill-in is disabled.
+  tableStorageFlowUrl: string
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   warnPercent: 80,
   criticalPercent: 100,
   defaultEnvironmentTypes: ['Production', 'Sandbox'],
+  tableStorageFlowUrl: '',
+}
+
+// Dimension of Dataverse storage we drill into per environment.
+// Maps directly to the licensing entitlement path segment.
+export type TableStorageDimension = 'Database' | 'File' | 'Log'
+
+export const TABLE_STORAGE_DIMENSIONS: TableStorageDimension[] = ['Database', 'File', 'Log']
+
+// One row in the per-table storage response for a given env + dimension.
+// resourceId is the raw SQL/logical table name from the licensing service
+// (may be a *Base suffix or a SQL system view like sys_columns). consumedMb
+// is the storage consumption in megabytes even though the wire "unit" field
+// is literally the string "Count".
+export type TableStorageRow = {
+  resourceId: string
+  consumedMb: number
+  lastRefreshedDate: string
+}
+
+// Full response the drawer works with. hasMore indicates whether a follow-up
+// paged request would return more rows (skip += top).
+export type TableStorageResponse = {
+  envId: string
+  dimension: TableStorageDimension
+  rows: TableStorageRow[]
+  hasMore: boolean
+  // Latest lastRefreshedDate across returned rows — surfaced in the UI so
+  // users know how stale the licensing-service snapshot is.
+  latestRefreshDate: string | null
+}
+
+export type TableStorageQuery = {
+  search?: string
+  skip?: number
+  top?: number
 }
 
 export const ALL_ENVIRONMENT_TYPES: EnvironmentType[] = [

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type {
   AppSettings,
+  EnvironmentRow,
   EvaluatedRow,
   EnvironmentType,
   Thresholds,
@@ -8,6 +9,8 @@ import type {
 import { ALL_ENVIRONMENT_TYPES, isPoolImpacting } from '../../domain/types'
 import { cellClass } from '../../domain/evaluate'
 import { downloadCsv, rowsToCsv } from './exportCsv'
+import type { StorageRepository } from '../../repositories/StorageRepository'
+import { TableStorageDrawer } from '../tables/TableStorageDrawer'
 
 type SortKey =
   | 'name' | 'type' | 'region' | 'owner' | 'billing' | 'paygo'
@@ -17,6 +20,7 @@ type Props = {
   rows: EvaluatedRow[]
   settings: AppSettings
   loading: boolean
+  repo: StorageRepository | null
 }
 
 function fmtNum(n: number, digits = 1) {
@@ -27,7 +31,7 @@ function statusRank(s: EvaluatedRow['status']) {
   return s === 'over' ? 0 : s === 'warn' ? 1 : 2
 }
 
-export function ReportPage({ rows, settings, loading }: Props) {
+export function ReportPage({ rows, settings, loading, repo }: Props) {
   const [query, setQuery] = useState('')
   const [types, setTypes] = useState<Set<EnvironmentType>>(
     () => new Set(settings.defaultEnvironmentTypes),
@@ -37,6 +41,8 @@ export function ReportPage({ rows, settings, loading }: Props) {
   const [onlyPoolImpacting, setOnlyPoolImpacting] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('status')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  // Env whose per-table drill-in drawer is currently open. null = closed.
+  const [drilledEnv, setDrilledEnv] = useState<EnvironmentRow | null>(null)
 
   const thresholds: Thresholds = {
     warnPercent: settings.warnPercent,
@@ -176,8 +182,14 @@ export function ReportPage({ rows, settings, loading }: Props) {
             )}
             {sorted.map((r) => {
               const s = r.snapshot
+              const drillable = Boolean(repo)
               return (
-                <tr key={r.environment.id}>
+                <tr
+                  key={r.environment.id}
+                  onClick={drillable ? () => setDrilledEnv(r.environment) : undefined}
+                  style={drillable ? { cursor: 'pointer' } : undefined}
+                  title={drillable ? 'Open per-table storage breakdown' : undefined}
+                >
                   <td>
                     <div style={{ fontWeight: 600 }}>{r.environment.displayName}</div>
                     {r.environment.url && (
@@ -275,6 +287,13 @@ export function ReportPage({ rows, settings, loading }: Props) {
           </tbody>
         </table>
       </div>
+      {repo && (
+        <TableStorageDrawer
+          env={drilledEnv}
+          onClose={() => setDrilledEnv(null)}
+          repo={repo}
+        />
+      )}
     </div>
   )
 }

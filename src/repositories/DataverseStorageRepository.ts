@@ -12,8 +12,12 @@ import {
   type AppSettings,
   type EnvironmentRow,
   type StorageSnapshot,
+  type TableStorageDimension,
+  type TableStorageQuery,
+  type TableStorageResponse,
 } from '../domain/types'
 import type { StorageRepository } from './StorageRepository'
+import { invokeTableStorageFlow } from './tableStorageFlowClient'
 
 const ENVIRONMENT_SET = 'dsr_environments'
 const SNAPSHOT_SET = 'dsr_storagesnapshots'
@@ -60,11 +64,23 @@ export class DataverseStorageRepository implements StorageRepository {
       dsr_warnpercent: settings.warnPercent,
       dsr_criticalpercent: settings.criticalPercent,
       dsr_defaultenvironmenttypes: settings.defaultEnvironmentTypes.join(','),
+      dsr_tablestorageflowurl: settings.tableStorageFlowUrl ?? '',
     }
     if (rows[0]) {
       await this.client.update(SETTING_SET, rows[0].dsr_settingid, body)
     } else {
       await this.client.create(SETTING_SET, { ...body, dsr_name: 'default' })
     }
+  }
+
+  async getTableStorage(
+    envId: string,
+    dimension: TableStorageDimension,
+    query?: TableStorageQuery,
+  ): Promise<TableStorageResponse> {
+    const settings = await this.getSettings()
+    return invokeTableStorageFlow(settings.tableStorageFlowUrl, {
+      envId, dimension, search: query?.search, skip: query?.skip, top: query?.top,
+    })
   }
 }

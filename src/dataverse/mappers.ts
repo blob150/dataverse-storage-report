@@ -41,6 +41,7 @@ export type DataverseSetting = {
   dsr_warnpercent: number
   dsr_criticalpercent: number
   dsr_defaultenvironmenttypes: string
+  dsr_tablestorageflowurl?: string
 }
 
 function asType(value: string): EnvironmentType {
@@ -149,5 +150,6 @@ export function mapSetting(row: DataverseSetting): AppSettings {
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean) as EnvironmentType[],
+    tableStorageFlowUrl: s(row.dsr_tablestorageflowurl),
   }
 }

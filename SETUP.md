@@ -191,13 +191,27 @@ identity of whoever signs in here.
    tighter scopes, create a custom role with just those privileges.
 3. Save the connection reference.
 
-## Step 5 — Turn on the flow
+## Step 5 — Turn on the flows
 
-1. Solutions → Dataverse Storage Report → **Cloud flows** → "Ingest Dataverse
-   storage capacity".
-2. Confirm the recurrence trigger is set the way you want (default: every 24 h).
-3. Click **Turn on**.
-4. Click **Run** once to populate Dataverse immediately.
+The solution ships **two** cloud flows:
+
+1. **Ingest Dataverse storage capacity** — daily recurrence, populates
+   `dsr_environment` / `dsr_storagesnapshot` / `dsr_tenantpool`.
+2. **Get Dataverse table storage** — on-demand HTTP-triggered passthrough for
+   the code app's per-table drill-in drawer. Does not write to Dataverse.
+
+For **each** flow: Solutions → Dataverse Storage Report → **Cloud flows** →
+open the flow → **Turn on**.
+
+For the ingest flow, click **Run** once to populate Dataverse immediately.
+
+For the table-storage flow, after turning it on:
+
+1. Open the flow → click the **"When an HTTP request is received"** trigger.
+2. Copy the **HTTP POST URL** (it appears after first save/turn-on).
+3. Paste it into the code app under **Settings → Per-table drill-in**.
+
+Without step 3 the drawer stays disabled and env rows aren't clickable.
 
 If a run fails:
 

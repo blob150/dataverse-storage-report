@@ -88,3 +88,48 @@ export const mockSnapshots: StorageSnapshot[] = [
 ]
 
 export const mockSettings: AppSettings = { ...DEFAULT_SETTINGS }
+
+// Deterministic per-env / per-dimension fake table storage so the drill-in
+// drawer is fully explorable without a live flow. Numbers roughly track the
+// mock env-level snapshot totals so the pie of table sizes looks plausible.
+export function mockTableStorage(
+  envId: string,
+  dimension: 'Database' | 'File' | 'Log',
+): { resourceId: string; consumedMb: number; lastRefreshedDate: string }[] {
+  const stamp = '2026-05-26T04:15:00Z'
+  const base = {
+    Database: [
+      'ClientUpdate', 'ImportJobBase', 'SolutionComponentBase',
+      'UpgradeActionTracker', 'DAMSReIndexStatsDetails', 'RuntimeDependencyBase',
+      'CascadeOperation', 'admin_FlowBase', 'sys_all_columns', 'sys_columns',
+      'StringMapBase', 'packagehistoryBase', 'PrincipalObjectAccess',
+      'ProcessStageBase', 'sys_objects', 'MailboxBase', 'SystemUserBase',
+      'sys_index_columns', 'BulkDeleteOperationBase', 'dsr_StorageSnapshotBase',
+    ],
+    File: [
+      'Solution', 'LocalizedLabel', 'Attribute', 'PluginAssemblyBase',
+      'DependencyNodeBase', 'DependencyBase', 'WebResourceBase',
+      'RibbonClientMetadataBase', 'SystemFormBase', 'SdkMessageProcessingStepBase',
+      'RolePrivilegesBase', 'Relationship', 'SavedQueryBase',
+      'AsyncOperationBase', 'WorkflowBase', 'RibbonDiffBase', 'Entity',
+      'msdyn_dataflowBase', 'PrivilegeBase', 'ImageDescriptor',
+    ],
+    Log: [
+      'componentversionnrddatasource', 'textdatarecordsindexingstatus',
+      'flowrun', 'AuditBase', 'PluginTraceLogBase',
+    ],
+  } as const
+  const names = base[dimension]
+  // Seed for stable but env-varying values.
+  let seed = 0
+  for (const c of envId) seed = (seed + c.charCodeAt(0)) & 0xffff
+  const scale = dimension === 'Log' ? 0.3 : dimension === 'File' ? 40 : 20
+  return names.map((n, i) => {
+    const jitter = ((seed >> (i % 8)) & 0x1f) + 1
+    return {
+      resourceId: n,
+      consumedMb: Number(((names.length - i) * scale * (jitter / 12)).toFixed(3)),
+      lastRefreshedDate: stamp,
+    }
+  }).sort((a, b) => b.consumedMb - a.consumedMb)
+}

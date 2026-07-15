@@ -40,6 +40,11 @@ The built-in admin page has these problems this tool fixes:
 - **Only triggered** filter: show only Warning + Over capacity rows.
 - **CSV export** of the currently filtered/sorted view.
 - A **Last updated** indicator showing the most recent snapshot timestamp.
+- **Per-table drill-in**: click any environment row to open a side drawer with
+  a real-time breakdown of storage consumption by table for Database, File, and
+  Log. Powered by an on-demand HTTP-triggered flow (`dsr-gettablestorage`) that
+  proxies `licensing.powerplatform.microsoft.com`. Nothing is cataloged — the
+  drawer fetches fresh data every open.
 
 ## Architecture
 

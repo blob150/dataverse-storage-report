@@ -152,3 +152,127 @@
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pool-card { grid-template-columns: 1fr; }
 }
+
+
+/* ============ Per-table storage drill-in drawer ============ */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer {
+  width: min(720px, 95vw);
+  height: 100%;
+  background: white;
+  box-shadow: -12px 0 40px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: drawer-slide 180ms ease-out;
+}
+@keyframes drawer-slide {
+  from { transform: translateX(24px); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 8px;
+}
+.drawer-close:hover { color: var(--text); }
+.drawer-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 20px 0;
+}
+.drawer-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+.drawer-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.drawer-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 20px;
+  align-items: center;
+}
+.drawer-search {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.drawer-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+.drawer-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.drawer-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px 10px;
+  font-size: 12px;
+  color: var(--text);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.drawer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 20px;
+}
+.drawer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.drawer-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-strong);
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-table th.num { text-align: right; }
+.drawer-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-table td.num { text-align: right; }
+.drawer-table tbody tr:hover { background: var(--accent-soft); }
+.drawer-footer {
+  padding: 8px 20px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-strong);
+}

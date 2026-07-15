@@ -205,6 +205,46 @@
             <displayname description="Default Environment Types" languagecode="1033" />
           </displaynames>
         </attribute>
+        <attribute PhysicalName="dsr_TableStorageFlowUrl">
+          <Type>nvarchar</Type>
+          <Name>dsr_tablestorageflowurl</Name>
+          <LogicalName>dsr_tablestorageflowurl</LogicalName>
+          <RequiredLevel>none</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <ValidForUpdateApi>1</ValidForUpdateApi>
+          <ValidForReadApi>1</ValidForReadApi>
+          <ValidForCreateApi>1</ValidForCreateApi>
+          <IsCustomField>1</IsCustomField>
+          <IsAuditEnabled>1</IsAuditEnabled>
+          <IsSecured>0</IsSecured>
+          <IntroducedVersion>1.1.0.0</IntroducedVersion>
+          <IsCustomizable>1</IsCustomizable>
+          <IsRenameable>1</IsRenameable>
+          <CanModifySearchSettings>1</CanModifySearchSettings>
+          <CanModifyRequirementLevelSettings>1</CanModifyRequirementLevelSettings>
+          <CanModifyAdditionalSettings>1</CanModifyAdditionalSettings>
+          <SourceType>0</SourceType>
+          <IsGlobalFilterEnabled>0</IsGlobalFilterEnabled>
+          <IsSortableEnabled>0</IsSortableEnabled>
+          <CanModifyGlobalFilterSettings>1</CanModifyGlobalFilterSettings>
+          <CanModifyIsSortableSettings>1</CanModifyIsSortableSettings>
+          <IsDataSourceSecret>0</IsDataSourceSecret>
+          <AutoNumberFormat></AutoNumberFormat>
+          <IsSearchable>0</IsSearchable>
+          <IsFilterable>0</IsFilterable>
+          <IsRetrievable>1</IsRetrievable>
+          <IsLocalizable>0</IsLocalizable>
+          <Format>url</Format>
+          <MaxLength>2000</MaxLength>
+          <Length>4000</Length>
+          <displaynames>
+            <displayname description="Table Storage Flow URL" languagecode="1033" />
+          </displaynames>
+          <Descriptions>
+            <Description description="HTTP-trigger URL for the dsr-gettablestorage flow. When populated, clicking an environment in the code app opens a per-table storage drill-in that POSTs to this URL. Leave blank to disable the drill-in." languagecode="1033" />
+          </Descriptions>
+        </attribute>
         <attribute PhysicalName="dsr_Name">
           <Type>nvarchar</Type>
           <Name>dsr_name</Name>

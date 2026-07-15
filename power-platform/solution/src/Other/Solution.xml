@@ -6,7 +6,7 @@
       <LocalizedName description="Dataverse Storage Report" languagecode="1033" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.0.0</Version>
+    <Version>1.1.0.0</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>DataverseStorageReportPublisher</UniqueName>
@@ -83,6 +83,7 @@
       <RootComponent type="1" schemaName="dsr_storagesnapshot" behavior="0" />
       <RootComponent type="1" schemaName="dsr_tenantpool" behavior="0" />
       <RootComponent type="29" id="{71813f52-5a5d-f111-a826-6045bd0494ec}" behavior="0" />
+      <RootComponent type="29" id="{2167dd11-6001-48a5-9d3d-503c0075bbb1}" behavior="0" />
       <RootComponent type="300" schemaName="dsr_dataversestoragereport_ef777" behavior="0" />
     </RootComponents>
     <MissingDependencies />
