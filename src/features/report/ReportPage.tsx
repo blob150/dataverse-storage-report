@@ -103,10 +103,22 @@ export function ReportPage({ rows, settings, loading, repo }: Props) {
     return max > 0 ? new Date(max) : null
   }, [rows])
 
+  // Colour-code staleness: fresh (<48h) is muted, warn (2-7d) is yellow,
+  // stale (>7d) is red. Helps callers realise the ingest flow needs a poke
+  // instead of blaming the app for showing "wrong" numbers.
+  const staleness = (() => {
+    if (!lastUpdated) return { color: 'var(--muted)', badge: '' }
+    const ageMs = Date.now() - lastUpdated.getTime()
+    const days = ageMs / (24 * 60 * 60 * 1000)
+    if (days > 7) return { color: 'var(--over)', badge: `${Math.round(days)}d old — run the ingest flow` }
+    if (days > 2) return { color: 'var(--warn)', badge: `${Math.round(days)}d old` }
+    return { color: 'var(--muted)', badge: '' }
+  })()
+
   const lastUpdatedLabel = loading
     ? 'Loading…'
     : lastUpdated
-      ? `Last updated ${lastUpdated.toLocaleString()}`
+      ? `Last updated ${lastUpdated.toLocaleString()}${staleness.badge ? ` · ${staleness.badge}` : ''}`
       : 'No snapshot data yet'
 
   return (
@@ -149,7 +161,7 @@ export function ReportPage({ rows, settings, loading, repo }: Props) {
         <button onClick={exportNow} style={btn}>Export CSV</button>
         <span
           className="muted-line"
-          style={{ fontSize: 12, marginLeft: 'auto', whiteSpace: 'nowrap' }}
+          style={{ fontSize: 12, marginLeft: 'auto', whiteSpace: 'nowrap', color: staleness.color, fontWeight: staleness.badge ? 600 : 400 }}
           title="Storage data is refreshed daily by the ingest flow"
         >
           {lastUpdatedLabel}

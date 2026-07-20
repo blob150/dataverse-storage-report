@@ -22,6 +22,15 @@
       <statecode>0</statecode>
       <statuscode>1</statuscode>
     </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontents">
+      <connectionreferencedisplayname>DSR HTTP with Entra ID</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
+      <description>Used by dsr_gettablestorageoboe to call licensing.powerplatform.microsoft.com with the connection user's delegated Entra ID token. Bind to a Power Platform admin user before turning on the flow.</description>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
   </connectionreferences>
   <Languages>
     <Language>1033</Language>

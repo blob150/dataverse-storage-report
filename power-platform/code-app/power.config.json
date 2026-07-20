@@ -1,15 +1,28 @@
 {
   "version": "1.0",
-  "appId": "<your-canvas-app-guid>",
+  "appId": "8fce8547-9dbe-427a-9838-104537d62f55",
   "appDisplayName": "Dataverse Storage Report",
   "region": "prod",
-  "environmentId": "<your-power-platform-environment-guid>",
+  "environmentId": "e0c96096-913f-eec3-8454-d21f7b956608",
   "description": "Tenant-wide Dataverse storage report covering Database, File, and Log allocation, PayGo consumption, and tenant pool availability.",
   "buildPath": "..\\..\\dist",
   "buildEntryPoint": "index.html",
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
-  "connectionReferences": {},
+  "connectionReferences": {
+    "e2ee9677-5626-4084-9279-b728c04742b8": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "getdataversetablestorage"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "2167dd11-6001-48a5-9d3d-503c0075bbb1",
+        "workflowDisplayName": "Get Dataverse table storage",
+        "workflowName": "2167dd11-6001-48a5-9d3d-503c0075bbb1"
+      }
+    }
+  },
   "databaseReferences": {
     "default.cds": {
       "databaseDetails": {
@@ -21,12 +34,12 @@
         },
         "linkedEnvironmentMetadata": {
           "resourceId": "",
-          "friendlyName": "<your-environment-friendly-name>",
-          "uniqueName": "<your-environment-unique-name>",
-          "domainName": "<your-org>",
+          "friendlyName": "Bprocida - Test",
+          "uniqueName": "unq5d4610990ce8ec1182f0000d3a35d",
+          "domainName": "bprocidatest",
           "version": "9.2",
-          "instanceUrl": "https://<your-org>.crm.dynamics.com/",
-          "instanceApiUrl": "https://<your-org>.crm.dynamics.com/api/data/v9.2/",
+          "instanceUrl": "https://bprocidatest.crm.dynamics.com/",
+          "instanceApiUrl": "https://bprocidatest.crm.dynamics.com/api/data/v9.2/",
           "baseLanguage": 1033,
           "instanceState": "Ready",
           "createdTime": "",

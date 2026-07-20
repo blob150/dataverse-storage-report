@@ -9,6 +9,15 @@
           "connectionReferenceLogicalName": "dsr_shareddataverse"
         },
         "runtimeSource": "embedded"
+      },
+      "shared_webcontents": {
+        "api": {
+          "name": "shared_webcontents"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "dsr_sharedwebcontents"
+        },
+        "runtimeSource": "embedded"
       }
     },
     "definition": {
@@ -28,15 +37,7 @@
           "type": "String",
           "metadata": {
             "schemaName": "dsr_TenantId",
-            "description": "Azure AD tenant GUID used to acquire licensing API admin tokens."
-          }
-        },
-        "DSR Admin Client ID (dsr_AdminClientId)": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-            "schemaName": "dsr_AdminClientId",
-            "description": "App registration (service principal) client ID used to call the licensing API."
+            "description": "Azure AD tenant GUID (kept for URI construction)."
           }
         }
       },
@@ -82,54 +83,20 @@
         }
       },
       "actions": {
-        "Perform_an_unbound_action": {
+        "Get_resources": {
           "type": "OpenApiConnection",
           "inputs": {
             "parameters": {
-              "actionName": "RetrieveEnvironmentVariableSecretValue",
-              "item/EnvironmentVariableName": "dsr_AdminClientSecret"
+              "Uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/', triggerBody()?['dimension'], '/environments/', triggerBody()?['envId'], '/resources?skip=0&filter=contains(resourceId,''', encodeUriComponent(coalesce(triggerBody()?['search'], '')), ''')&orderby=consumed desc')}",
+              "Method": "GET"
             },
             "host": {
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-              "operationId": "PerformUnboundAction",
-              "connectionName": "shared_commondataserviceforapps"
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+              "operationId": "InvokeHTTP",
+              "connectionName": "shared_webcontents"
             }
           },
           "runAfter": {},
-          "runtimeConfiguration": {
-            "secureData": {
-              "properties": [
-                "outputs"
-              ]
-            }
-          }
-        },
-        "Get_resources": {
-          "type": "Http",
-          "inputs": {
-            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/', triggerBody()?['dimension'], '/environments/', triggerBody()?['envId'], '/resources?skip=0&filter=contains(resourceId,''', encodeUriComponent(coalesce(triggerBody()?['search'], '')), ''')&orderby=consumed desc')}",
-            "method": "GET",
-            "authentication": {
-              "type": "ActiveDirectoryOAuth",
-              "authority": "https://login.microsoftonline.com",
-              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
-              "audience": "https://licensing.powerplatform.microsoft.com/",
-              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
-              "secret": "@{outputs('Perform_an_unbound_action')?['body/EnvironmentVariableSecretValue']}"
-            }
-          },
-          "runAfter": {
-            "Perform_an_unbound_action": [
-              "Succeeded"
-            ]
-          },
-          "runtimeConfiguration": {
-            "secureData": {
-              "properties": [
-                "inputs"
-              ]
-            }
-          },
           "metadata": {
             "operationMetadataId": "00000000-0000-0000-0000-000000000010"
           }
@@ -193,7 +160,7 @@
         }
       },
       "outputs": {},
-      "description": "On-demand per-table storage passthrough. Invoked by the Dataverse Storage Report code app via a PowerAppV2 trigger (caller-authenticated: only app users can call it). Forwards to https://licensing.powerplatform.microsoft.com/.../entitlements/{Database|File|Log}/environments/{envId}/resources using the DSR Admin App service principal. Returns the response body as a single string field so it can be parsed on the caller side. Does NOT write anything to Dataverse."
+      "description": "OBO / Entra variant of dsr-gettablestorage. Uses the HTTP with Microsoft Entra ID (preauthorized) connector (shared_webcontents) to call licensing.powerplatform.microsoft.com using the connection user's delegated token, rather than an SP token. Bind dsr_sharedwebcontents connection reference to a Power Platform admin user before turning on. If the connection succeeds but runs fail with 403 'Insufficient privileges', an admin needs to grant the HTTP with Entra ID app the licensing.powerplatform.microsoft.com/user_impersonation scope — see https://learn.microsoft.com/connectors/webcontents/ for the ManagePermissionGrant.ps1 script."
     }
   },
   "schemaVersion": "1.0.0.0"

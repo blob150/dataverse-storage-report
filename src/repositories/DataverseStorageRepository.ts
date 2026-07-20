@@ -39,11 +39,9 @@ export class DataverseStorageRepository implements StorageRepository {
   }
 
   async listLatestSnapshots(): Promise<StorageSnapshot[]> {
-    // Snapshots accumulate per ingest run; pull the last 48h and paginate so
-    // every environment's most recent row is included even when the history
-    // table holds many thousands of older snapshots.
-    const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-    const query = `$orderby=dsr_capturedat desc&$filter=dsr_capturedat gt ${sinceIso}`
+    // Newest snapshot per env, regardless of age. The ingest flow may have
+    // been paused; we don't want to hide stale-but-real data.
+    const query = `$orderby=dsr_capturedat desc`
     const rows = await this.client.listAll<DataverseStorageSnapshot>(SNAPSHOT_SET, query)
     const byEnv = new Map<string, StorageSnapshot>()
     for (const row of rows) {
@@ -64,7 +62,6 @@ export class DataverseStorageRepository implements StorageRepository {
       dsr_warnpercent: settings.warnPercent,
       dsr_criticalpercent: settings.criticalPercent,
       dsr_defaultenvironmenttypes: settings.defaultEnvironmentTypes.join(','),
-      dsr_tablestorageflowurl: settings.tableStorageFlowUrl ?? '',
     }
     if (rows[0]) {
       await this.client.update(SETTING_SET, rows[0].dsr_settingid, body)
@@ -78,9 +75,8 @@ export class DataverseStorageRepository implements StorageRepository {
     dimension: TableStorageDimension,
     query?: TableStorageQuery,
   ): Promise<TableStorageResponse> {
-    const settings = await this.getSettings()
-    return invokeTableStorageFlow(settings.tableStorageFlowUrl, {
-      envId, dimension, search: query?.search, skip: query?.skip, top: query?.top,
+    return invokeTableStorageFlow({
+      envId, dimension, search: query?.search,
     })
   }
 }

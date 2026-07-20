@@ -11,7 +11,6 @@ export function SettingsPage({ settings, onSave }: Props) {
   const [warn, setWarn] = useState(settings.warnPercent)
   const [critical, setCritical] = useState(settings.criticalPercent)
   const [types, setTypes] = useState<Set<EnvironmentType>>(new Set(settings.defaultEnvironmentTypes))
-  const [flowUrl, setFlowUrl] = useState(settings.tableStorageFlowUrl ?? '')
   const [saved, setSaved] = useState(false)
 
   function toggle(t: EnvironmentType) {
@@ -25,7 +24,6 @@ export function SettingsPage({ settings, onSave }: Props) {
       warnPercent: warn,
       criticalPercent: critical,
       defaultEnvironmentTypes: Array.from(types),
-      tableStorageFlowUrl: flowUrl.trim(),
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -56,27 +54,6 @@ export function SettingsPage({ settings, onSave }: Props) {
             </label>
           ))}
         </div>
-      </div>
-
-      <div>
-        <h3 style={{ margin: '0 0 8px 0' }}>Per-table drill-in</h3>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>
-          dsr-gettablestorage flow — HTTP trigger URL
-        </label>
-        <input
-          type="url"
-          value={flowUrl}
-          onChange={(e) => setFlowUrl(e.target.value)}
-          placeholder="https://prod-XX.westus.logic.azure.com:443/workflows/…"
-          style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 }}
-        />
-        <p className="muted-line" style={{ fontSize: 12, marginTop: 6 }}>
-          Clicking an environment in the report opens a per-table storage drawer.
-          The drawer fetches live per-resource consumption from Microsoft's licensing
-          service through this passthrough flow — nothing is written to Dataverse.
-          Paste the flow's <em>&ldquo;When an HTTP request is received&rdquo;</em> URL
-          here (Maker portal → your flow → trigger → Copy). Leave blank to disable the drill-in.
-        </p>
       </div>
 
       <div>

@@ -56,37 +56,32 @@ export class PowerAppsStorageRepository implements StorageRepository {
   }
 
   async listLatestSnapshots(): Promise<StorageSnapshot[]> {
-    // Snapshots accumulate per ingest run. Use a 48h filter, page through with
-    // skipToken so we don't miss envs even when the table balloons (the SDK
-    // page size caps below 5000 in practice).
-    const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    // Snapshots accumulate one row per env per ingest run. We want the newest
+    // per env regardless of age — the ingest flow may have been off for a
+    // while — so we scan newest-first and take the first row we see for each
+    // env id, with a hard scan cap as a safety net.
     const byEnv = new Map<string, StorageSnapshot>()
     let skipToken: string | undefined
-    let firstRowLogged = false
+    let scanned = 0
+    const MAX_SCAN = 20000
     for (let page = 0; page < 50; page += 1) {
       const res = await this.client.retrieveMultipleRecordsAsync<DataverseStorageSnapshot>(
         SNAPSHOT_DS,
         {
           orderBy: ['dsr_capturedat desc'],
-          filter: `dsr_capturedat gt ${sinceIso}`,
           maxPageSize: 5000,
           ...(skipToken ? { skipToken } : {}),
         },
       )
       throwIfFailed(res, 'list snapshots')
-      if (!firstRowLogged && res.data && res.data.length) {
-        // eslint-disable-next-line no-console
-        console.log('[DSR] snapshot row keys:', Object.keys(res.data[0] as object))
-        // eslint-disable-next-line no-console
-        console.log('[DSR] sample snapshot row:', res.data[0])
-        firstRowLogged = true
-      }
       for (const row of res.data ?? []) {
+        scanned += 1
         const snap = mapSnapshot(row)
         if (!byEnv.has(snap.environmentId)) byEnv.set(snap.environmentId, snap)
       }
       skipToken = res.skipToken
       if (!skipToken) break
+      if (scanned >= MAX_SCAN) break
     }
     return Array.from(byEnv.values())
   }
@@ -111,7 +106,6 @@ export class PowerAppsStorageRepository implements StorageRepository {
       dsr_warnpercent: settings.warnPercent,
       dsr_criticalpercent: settings.criticalPercent,
       dsr_defaultenvironmenttypes: settings.defaultEnvironmentTypes.join(','),
-      dsr_tablestorageflowurl: settings.tableStorageFlowUrl ?? '',
     }
     const row = existing.data?.[0]
     if (row) {
@@ -131,9 +125,8 @@ export class PowerAppsStorageRepository implements StorageRepository {
     dimension: TableStorageDimension,
     query?: TableStorageQuery,
   ): Promise<TableStorageResponse> {
-    const settings = await this.getSettings()
-    return invokeTableStorageFlow(settings.tableStorageFlowUrl, {
-      envId, dimension, search: query?.search, skip: query?.skip, top: query?.top,
+    return invokeTableStorageFlow({
+      envId, dimension, search: query?.search,
     })
   }
 }

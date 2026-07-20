@@ -43,41 +43,37 @@
       "triggers": {
         "manual": {
           "type": "Request",
-          "kind": "Http",
+          "kind": "PowerAppV2",
           "inputs": {
             "schema": {
               "type": "object",
-              "required": [
-                "envId",
-                "dimension"
-              ],
               "properties": {
                 "envId": {
                   "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true,
+                  "title": "envId",
                   "description": "Power Platform environment GUID."
                 },
                 "dimension": {
                   "type": "string",
-                  "enum": [
-                    "Database",
-                    "File",
-                    "Log"
-                  ],
-                  "description": "Storage entitlement dimension to drill into."
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true,
+                  "title": "dimension",
+                  "description": "Storage dimension: Database | File | Log."
                 },
                 "search": {
                   "type": "string",
-                  "description": "Substring filter over resourceId (case-insensitive per Microsoft). Empty for no filter."
-                },
-                "skip": {
-                  "type": "integer",
-                  "description": "OData $skip for paging."
-                },
-                "top": {
-                  "type": "integer",
-                  "description": "Not forwarded upstream (licensing service does not honor $top on this route); used only by caller to size the page. Ignored here."
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true,
+                  "title": "search",
+                  "description": "Substring filter over resourceId. Empty for no filter."
                 }
-              }
+              },
+              "required": [
+                "envId",
+                "dimension"
+              ]
             }
           },
           "metadata": {
@@ -111,7 +107,7 @@
         "Get_resources": {
           "type": "Http",
           "inputs": {
-            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/', triggerBody()?['dimension'], '/environments/', triggerBody()?['envId'], '/resources?skip=', string(coalesce(triggerBody()?['skip'], 0)), '&filter=contains(resourceId,''', encodeUriComponent(coalesce(triggerBody()?['search'], '')), ''')&orderby=consumed desc')}",
+            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/', triggerBody()?['dimension'], '/environments/', triggerBody()?['envId'], '/resources?skip=0&filter=contains(resourceId,''', encodeUriComponent(coalesce(triggerBody()?['search'], '')), ''')&orderby=consumed desc')}",
             "method": "GET",
             "authentication": {
               "type": "ActiveDirectoryOAuth",
@@ -140,15 +136,21 @@
         },
         "Respond_success": {
           "type": "Response",
-          "kind": "Http",
+          "kind": "PowerApp",
           "inputs": {
             "statusCode": 200,
-            "headers": {
-              "Content-Type": "application/json"
+            "schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "title": "body",
+                  "type": "string",
+                  "x-ms-dynamically-added": true
+                }
+              }
             },
             "body": {
-              "value": "@body('Get_resources')",
-              "hasMore": false
+              "body": "@{string(body('Get_resources'))}"
             }
           },
           "runAfter": {
@@ -162,17 +164,21 @@
         },
         "Respond_error": {
           "type": "Response",
-          "kind": "Http",
+          "kind": "PowerApp",
           "inputs": {
             "statusCode": 502,
-            "headers": {
-              "Content-Type": "application/json"
+            "schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "title": "body",
+                  "type": "string",
+                  "x-ms-dynamically-added": true
+                }
+              }
             },
             "body": {
-              "error": {
-                "message": "@{concat('Licensing service call failed (status ', string(outputs('Get_resources')?['statusCode']), '): ', string(body('Get_resources')))}",
-                "upstream": "@body('Get_resources')"
-              }
+              "body": "@{concat('{\"error\":{\"message\":\"Licensing service call failed (status ', string(outputs('Get_resources')?['statusCode']), ')\",\"upstream\":', string(body('Get_resources')), '}}')}"
             }
           },
           "runAfter": {
@@ -187,7 +193,7 @@
         }
       },
       "outputs": {},
-      "description": "On-demand per-table storage passthrough. Called by the Dataverse Storage Report code app when a user clicks an environment. Forwards to https://licensing.powerplatform.microsoft.com/.../entitlements/{Database|File|Log}/environments/{envId}/resources using the DSR Admin App service principal. Does NOT write anything to Dataverse. Bind the Dataverse connection (dsr_shareddataverse) and turn the flow on after solution import, then copy the HTTP trigger URL into the app's Settings > Per-table drill-in."
+      "description": "On-demand per-table storage passthrough. Invoked by the Dataverse Storage Report code app via a PowerAppV2 trigger (caller-authenticated: only app users can call it). Forwards to https://licensing.powerplatform.microsoft.com/.../entitlements/{Database|File|Log}/environments/{envId}/resources using the DSR Admin App service principal. Returns the response body as a single string field so it can be parsed on the caller side. Does NOT write anything to Dataverse."
     }
   },
   "schemaVersion": "1.0.0.0"

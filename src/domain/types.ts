@@ -72,17 +72,12 @@ export type AppSettings = {
   warnPercent: number
   criticalPercent: number
   defaultEnvironmentTypes: EnvironmentType[]
-  // HTTP-trigger URL for the dsr-gettablestorage flow. Populated post-import
-  // from the flow's "When an HTTP request is received" trigger URL. Empty
-  // means the per-table drill-in is disabled.
-  tableStorageFlowUrl: string
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   warnPercent: 80,
   criticalPercent: 100,
   defaultEnvironmentTypes: ['Production', 'Sandbox'],
-  tableStorageFlowUrl: '',
 }
 
 // Dimension of Dataverse storage we drill into per environment.

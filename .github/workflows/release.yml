@@ -91,10 +91,20 @@ jobs:
             ".woff": "font/woff",
             ".woff2": "font/woff2",
           }
+          # IMPORTANT: the Power Apps code-app runtime treats the FIRST URI in the
+          # list as the entry point. If a non-HTML file (e.g. a hashed .js) sorts
+          # ahead of index.html here, the runtime serves that raw file to the
+          # browser and users see minified JavaScript in the app frame instead of
+          # the React shell. Sort so that any index.html at the bundle root comes
+          # first, then everything else alphabetically.
+          files = [p for p in glob.glob(f"{bundle}/**", recursive=True) if os.path.isfile(p)]
+          def sort_key(p):
+              rel = os.path.relpath(p, bundle).replace(os.sep, "/")
+              # (is-not-root-index-html, path) -- False < True in Python, so
+              # index.html at bundle root sorts to the top.
+              return (rel != "index.html", rel)
           uris = []
-          for path in sorted(glob.glob(f"{bundle}/**", recursive=True)):
-              if not os.path.isfile(path):
-                  continue
+          for path in sorted(files, key=sort_key):
               rel = os.path.relpath(path, bundle).replace(os.sep, "/")
               ext = os.path.splitext(rel)[1].lower()
               t = ctype.get(ext, "application/octet-stream")
@@ -106,9 +116,16 @@ jobs:
           new_block = "<CodeAppPackageUris>\n" + "\n".join(uris) + "\n  </CodeAppPackageUris>"
           xml = re.sub(r"<CodeAppPackageUris>.*?</CodeAppPackageUris>", new_block, xml, count=1, flags=re.DOTALL)
 
+          # Bump AppVersion to now so the Power Apps runtime rehydrates the
+          # cached bundle for existing users instead of continuing to serve
+          # whatever it had cached against the previous timestamp.
+          from datetime import datetime, timezone
+          stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          xml = re.sub(r"<AppVersion>[^<]+</AppVersion>", f"<AppVersion>{stamp}</AppVersion>", xml, count=1)
+
           with open(meta, "w", encoding="utf-8") as f:
               f.write(xml)
-          print(f"Rewrote {meta} with {len(uris)} CodeAppPackageUri entries.")
+          print(f"Rewrote {meta} with {len(uris)} CodeAppPackageUri entries; AppVersion={stamp}")
           PY
 
       - name: Pack unmanaged solution

@@ -1,0 +1,118 @@
+{
+  "name": "Get Dataverse table storage",
+  "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+  "type": "Microsoft.PowerApps/apis",
+  "properties": {
+    "displayName": "Get Dataverse table storage",
+    "isCustom": false,
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "Get Dataverse table storage",
+        "version": "2015-02-01-preview"
+      },
+      "host": "unitedstates-002.azure-apim.net",
+      "schemes": [
+        "https"
+      ],
+      "consumes": [
+        "application/json"
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "paths": {
+        "/{connectionId}/triggers/manual/run": {
+          "post": {
+            "operationId": "Run",
+            "description": "Runs a logic flow trigger.",
+            "parameters": [
+              {
+                "name": "connectionId",
+                "in": "path",
+                "required": true,
+                "type": "string",
+                "x-ms-visibility": "internal"
+              },
+              {
+                "name": "input",
+                "description": "The trigger's input",
+                "in": "body",
+                "required": true,
+                "schema": {
+                  "$ref": "#/definitions/ManualTriggerInput"
+                }
+              },
+              {
+                "name": "api-version",
+                "description": "The api version",
+                "in": "query",
+                "required": true,
+                "default": "2015-02-01-preview",
+                "x-ms-visibility": "internal",
+                "type": "string"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Ok",
+                "schema": {
+                  "$ref": "#/definitions/ResponseActionOutput"
+                }
+              },
+              "default": {
+                "description": "The Flow Response.",
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "definitions": {
+        "ManualTriggerInput": {
+          "type": "object",
+          "properties": {
+            "envId": {
+              "type": "string",
+              "x-ms-content-hint": "TEXT",
+              "x-ms-dynamically-added": true,
+              "title": "envId",
+              "description": "Power Platform environment GUID."
+            },
+            "dimension": {
+              "type": "string",
+              "x-ms-content-hint": "TEXT",
+              "x-ms-dynamically-added": true,
+              "title": "dimension",
+              "description": "Storage dimension: Database | File | Log."
+            },
+            "search": {
+              "type": "string",
+              "x-ms-content-hint": "TEXT",
+              "x-ms-dynamically-added": true,
+              "title": "search",
+              "description": "Substring filter over resourceId. Empty for no filter."
+            }
+          },
+          "required": [
+            "envId",
+            "dimension"
+          ]
+        },
+        "ResponseActionOutput": {
+          "type": "object",
+          "properties": {
+            "body": {
+              "title": "body",
+              "type": "string",
+              "x-ms-dynamically-added": true
+            }
+          }
+        }
+      },
+      "basePath": "/apim/logicflows"
+    }
+  }
+}
