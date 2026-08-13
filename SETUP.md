@@ -197,29 +197,56 @@ The solution ships **two** cloud flows:
 
 1. **Ingest Dataverse storage capacity** — daily recurrence, populates
    `dsr_environment` / `dsr_storagesnapshot` / `dsr_tenantpool`.
-2. **Get Dataverse table storage** — on-demand HTTP-triggered passthrough for
-   the code app's per-table drill-in drawer. Does not write to Dataverse.
+2. **Get Dataverse table storage** — on-demand PowerApp-triggered flow for
+   the code app's per-table drill-in drawer. Takes an `envUrl` parameter
+   (the target env's Dataverse Web API base URL, e.g.
+   `https://contoso.crm.dynamics.com`), authenticates as the DSR service
+   principal, and returns per-table row counts by calling
+   `EntityDefinitions` + `RetrieveTotalRecordCount` on the target env.
+   Does not write to Dataverse.
+
+   The flow **scopes its query** to unmanaged custom tables plus a curated
+   list of ~40 well-known standard tables (account, contact, opportunity,
+   activitypointer, systemuser, workflow, etc.). Managed tables from
+   installed solutions are omitted so the whole call finishes inside the
+   120s PowerApp sync-trigger budget and stays well under Dataverse's
+   6,000 requests / 5 min and 52 concurrent-request service-protection
+   limits.
 
 For **each** flow: Solutions → Dataverse Storage Report → **Cloud flows** →
 open the flow → **Turn on**.
 
 For the ingest flow, click **Run** once to populate Dataverse immediately.
 
-For the table-storage flow, after turning it on:
+The table-storage flow is called directly by the code app via its Power
+Automate connector — **no HTTP URL needs to be copied anywhere**. The
+`shared_logicflows` connection reference is created automatically the first
+time the code app is added via `pac code add-flow`. If the drawer errors
+with `Connection reference not found: getdataversetablestorage`, the CR
+was deleted (typically by a solution re-import) — re-run:
 
-1. Open the flow → click the **"When an HTTP request is received"** trigger.
-2. Copy the **HTTP POST URL** (it appears after first save/turn-on).
-3. Paste it into the code app under **Settings → Per-table drill-in**.
+```powershell
+pac code delete-data-source --dataSourceName getdataversetablestorage --apiId shared_logicflows
+npx power-apps add-flow --flow-id 2167dd11-6001-48a5-9d3d-503c0075bbb1 --non-interactive
+```
 
-Without step 3 the drawer stays disabled and env rows aren't clickable.
+Then rebuild and push the code app.
+
+**Prerequisite in each target env:** the DSR service principal must be
+added as an **Application User** with **System Administrator** (or a
+custom role granting `prvRead` on `EntityMetadata` + read on the tables
+you want counts for). Without this, `RetrieveTotalRecordCount` returns
+401 or empty results for that env.
 
 If a run fails:
 
 - **401 from `api.bap.microsoft.com` or `licensing.powerplatform.microsoft.com`**
-  → service principal is not registered as a Power Platform management app
-  (Step 1, item 5).
+  (ingest flow only) → service principal is not registered as a Power
+  Platform management app (Step 1, item 5).
 - **403 from `graph.microsoft.com`** → `User.Read.All` permission missing or not
   admin-consented.
+- **401 from the target env's `/api/data/v9.2`** (table-storage flow) → SP is
+  not an Application User in that env, or lacks read privileges.
 - **`Caller does not have access to the requested secret`** → the Dataverse
   first-party service principal (`00000007-0000-0000-c000-000000000000`)
   does not have `Key Vault Secrets User` on the Key Vault holding the

@@ -2,9 +2,7 @@ import type {
   AppSettings,
   EnvironmentRow,
   StorageSnapshot,
-  TableStorageDimension,
-  TableStorageQuery,
-  TableStorageResponse,
+  TableRowCountResponse,
 } from '../domain/types'
 
 export interface StorageRepository {
@@ -12,13 +10,8 @@ export interface StorageRepository {
   listLatestSnapshots(): Promise<StorageSnapshot[]>
   getSettings(): Promise<AppSettings>
   saveSettings(settings: AppSettings): Promise<void>
-  // Per-table storage drill-in for one env + dimension. Real-time (not cached
-  // in Dataverse) — the implementation forwards to the dsr-gettablestorage
-  // flow, which proxies the licensing.powerplatform.microsoft.com endpoint.
-  // Throws if the flow URL isn't configured in settings.
-  getTableStorage(
-    envId: string,
-    dimension: TableStorageDimension,
-    query?: TableStorageQuery,
-  ): Promise<TableStorageResponse>
+  // Per-table row counts for the env drill-in. Uses the target env's Dataverse
+  // Web API with the signed-in user's delegated token via MSAL popup. Users
+  // need Read privilege on the entities in the target env.
+  getTableRowCounts(env: EnvironmentRow, opts?: { force?: boolean }): Promise<TableRowCountResponse>
 }

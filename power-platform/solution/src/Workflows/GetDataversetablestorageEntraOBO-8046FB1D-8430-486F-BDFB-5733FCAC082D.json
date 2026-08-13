@@ -161,7 +161,8 @@
       },
       "outputs": {},
       "description": "OBO / Entra variant of dsr-gettablestorage. Uses the HTTP with Microsoft Entra ID (preauthorized) connector (shared_webcontents) to call licensing.powerplatform.microsoft.com using the connection user's delegated token, rather than an SP token. Bind dsr_sharedwebcontents connection reference to a Power Platform admin user before turning on. If the connection succeeds but runs fail with 403 'Insufficient privileges', an admin needs to grant the HTTP with Entra ID app the licensing.powerplatform.microsoft.com/user_impersonation scope — see https://learn.microsoft.com/connectors/webcontents/ for the ManagePermissionGrant.ps1 script."
-    }
+    },
+    "templateName": null
   },
   "schemaVersion": "1.0.0.0"
 }

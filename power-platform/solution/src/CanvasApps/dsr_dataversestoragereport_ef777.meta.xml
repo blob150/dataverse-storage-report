@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <CanvasApp xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Name>dsr_dataversestoragereport_ef777</Name>
-  <AppVersion>2026-07-20T15:41:25Z</AppVersion>
+  <AppVersion>2026-08-13T19:47:25Z</AppVersion>
   <Status>Ready</Status>
   <CreatedByClientVersion>0.0.0.0</CreatedByClientVersion>
   <MinClientVersion>0.0.0.0</MinClientVersion>
@@ -12,9 +12,9 @@
   <DisplayName>Dataverse Storage Report</DisplayName>
   <Description>Tenant-wide Dataverse storage report covering Database, File, and Log allocation, PayGo consumption, and tenant pool availability.</Description>
   <CommitMessage xsi:nil="true"></CommitMessage>
-  <Publisher xsi:nil="true"></Publisher>
+  <Publisher></Publisher>
   <AuthorizationReferences>[]</AuthorizationReferences>
-  <ConnectionReferences>{}</ConnectionReferences>
+  <ConnectionReferences>{"5314db32-d454-4283-b1ea-04742e799fd7":{"id":"/providers/Microsoft.PowerApps/apis/shared_logicflows","displayName":"Logic flows","iconUri":"https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/v1.0.1774/1.0.1774.4397/logicflows/icon.png","dataSources":["getdataversetablestorage"],"dependencies":[],"dependents":[],"parameterHints":{"workflowEntityId":{"value":"2167dd11-6001-48a5-9d3d-503c0075bbb1"},"workflowDisplayName":{"value":"Get Dataverse table storage"},"workflowName":{"value":"fb8a47ca-de39-4ad1-964b-13f644c95c3f"}},"parameterHintsV2":{"workflowEntityId":{"value":"2167dd11-6001-48a5-9d3d-503c0075bbb1"},"workflowDisplayName":{"value":"Get Dataverse table storage"},"workflowName":{"value":"fb8a47ca-de39-4ad1-964b-13f644c95c3f"}},"isOnPremiseConnection":false,"bypassConsent":false,"dataSets":{},"apiTier":"Standard","actions":[]}}</ConnectionReferences>
   <DatabaseReferences>{"default.cds":{"databaseDetails":{"referenceType":"Environmental","environmentName":"default.cds","overrideValues":{"status":"NotSpecified","environmentVariableName":""}},"dataSources":{"dsr_environments":{"entitySetName":"dsr_environments","logicalName":"dsr_environment"},"dsr_storagesnapshots":{"entitySetName":"dsr_storagesnapshots","logicalName":"dsr_storagesnapshot"},"dsr_settings":{"entitySetName":"dsr_settings","logicalName":"dsr_setting"}}}}</DatabaseReferences>
   <AppComponents>[]</AppComponents>
   <AppComponentDependencies>[]</AppComponentDependencies>
@@ -24,10 +24,11 @@
   <AdminControlBypassConsent>0</AdminControlBypassConsent>
   <EmbeddedApp xsi:nil="true"></EmbeddedApp>
   <IntroducedVersion>1.0</IntroducedVersion>
-  <CdsDependencies>{"cdsdependencies":[{"logicalname":"dsr_environment","componenttype":1},{"logicalname":"dsr_storagesnapshot","componenttype":1},{"logicalname":"dsr_setting","componenttype":1}]}</CdsDependencies>
+  <CdsDependencies>{"cdsdependencies":[{"dependencyid":"2167dd11-6001-48a5-9d3d-503c0075bbb1","componenttype":29,"componenttypeplatformname":"Workflow"},{"logicalname":"dsr_environment","componenttype":1},{"logicalname":"dsr_storagesnapshot","componenttype":1},{"logicalname":"dsr_setting","componenttype":1}]}</CdsDependencies>
   <IsCustomizable>1</IsCustomizable>
   <CodeAppPackageUris>
     <CodeAppPackageUri>/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages/index.html_ContentType_text/html</CodeAppPackageUri>
+    <CodeAppPackageUri>/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages/assets/index-DrBvAP_U.js_ContentType_application/javascript</CodeAppPackageUri>
     <CodeAppPackageUri>/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages/assets/index-uqQgr2-V.css_ContentType_text/css</CodeAppPackageUri>
-    <CodeAppPackageUri>/CanvasApps/dsr_dataversestoragereport_ef777_CodeAppPackages/assets/index-D7QpinNJ.js_ContentType_application/javascript</CodeAppPackageUri>
-  </CodeAppPackageUris></CanvasApp>
+  </CodeAppPackageUris>
+</CanvasApp>

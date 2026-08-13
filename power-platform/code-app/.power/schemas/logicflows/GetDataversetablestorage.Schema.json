@@ -74,31 +74,16 @@
         "ManualTriggerInput": {
           "type": "object",
           "properties": {
-            "envId": {
+            "envUrl": {
               "type": "string",
               "x-ms-content-hint": "TEXT",
               "x-ms-dynamically-added": true,
-              "title": "envId",
-              "description": "Power Platform environment GUID."
-            },
-            "dimension": {
-              "type": "string",
-              "x-ms-content-hint": "TEXT",
-              "x-ms-dynamically-added": true,
-              "title": "dimension",
-              "description": "Storage dimension: Database | File | Log."
-            },
-            "search": {
-              "type": "string",
-              "x-ms-content-hint": "TEXT",
-              "x-ms-dynamically-added": true,
-              "title": "search",
-              "description": "Substring filter over resourceId. Empty for no filter."
+              "title": "envUrl",
+              "description": "Target Dataverse env URL (e.g. https://bprocidatest.crm.dynamics.com/)."
             }
           },
           "required": [
-            "envId",
-            "dimension"
+            "envUrl"
           ]
         },
         "ResponseActionOutput": {

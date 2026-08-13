@@ -41,10 +41,21 @@ The built-in admin page has these problems this tool fixes:
 - **CSV export** of the currently filtered/sorted view.
 - A **Last updated** indicator showing the most recent snapshot timestamp.
 - **Per-table drill-in**: click any environment row to open a side drawer with
-  a real-time breakdown of storage consumption by table for Database, File, and
-  Log. Powered by an on-demand HTTP-triggered flow (`dsr-gettablestorage`) that
-  proxies `licensing.powerplatform.microsoft.com`. Nothing is cataloged — the
-  drawer fetches fresh data every open.
+  a real-time **row-count** breakdown for the tables in that environment.
+  Powered by an on-demand HTTP-triggered flow (`dsr-gettablestorage`) that
+  calls each target environment's own Dataverse Web API
+  (`RetrieveTotalRecordCount`) using the DSR service principal. Nothing is
+  cataloged — the drawer fetches fresh data every open (with a per-env
+  session cache to avoid repeat calls).
+
+  **Scope:** the drawer shows your **unmanaged custom tables** plus a curated
+  set of ~40 standard tables (account, contact, opportunity, activitypointer,
+  systemuser, workflow, solution, etc.). Managed tables from installed
+  solutions are omitted to keep the sync-triggered call under Dataverse
+  service-protection limits. Per-table **bytes** are not available — the
+  `licensing.powerplatform.microsoft.com` capacity endpoint that produces
+  them is closed to any non-PPAC caller and cannot be reached from a custom
+  app, service principal, or delegated flow.
 
 ## Architecture
 

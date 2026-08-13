@@ -1,200 +1,344 @@
-{
-  "properties": {
-    "connectionReferences": {
-      "shared_commondataserviceforapps": {
-        "api": {
-          "name": "shared_commondataserviceforapps"
-        },
-        "connection": {
-          "connectionReferenceLogicalName": "dsr_shareddataverse"
-        },
-        "runtimeSource": "embedded"
-      }
-    },
-    "definition": {
-      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
-      "contentVersion": "1.0.0.0",
-      "parameters": {
-        "$authentication": {
-          "defaultValue": {},
-          "type": "SecureObject"
-        },
-        "$connections": {
-          "defaultValue": {},
-          "type": "Object"
-        },
-        "DSR Tenant ID (dsr_TenantId)": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-            "schemaName": "dsr_TenantId",
-            "description": "Azure AD tenant GUID used to acquire licensing API admin tokens."
-          }
-        },
-        "DSR Admin Client ID (dsr_AdminClientId)": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-            "schemaName": "dsr_AdminClientId",
-            "description": "App registration (service principal) client ID used to call the licensing API."
-          }
-        }
-      },
-      "triggers": {
-        "manual": {
-          "type": "Request",
-          "kind": "PowerAppV2",
-          "inputs": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "envId": {
-                  "type": "string",
-                  "x-ms-content-hint": "TEXT",
-                  "x-ms-dynamically-added": true,
-                  "title": "envId",
-                  "description": "Power Platform environment GUID."
-                },
-                "dimension": {
-                  "type": "string",
-                  "x-ms-content-hint": "TEXT",
-                  "x-ms-dynamically-added": true,
-                  "title": "dimension",
-                  "description": "Storage dimension: Database | File | Log."
-                },
-                "search": {
-                  "type": "string",
-                  "x-ms-content-hint": "TEXT",
-                  "x-ms-dynamically-added": true,
-                  "title": "search",
-                  "description": "Substring filter over resourceId. Empty for no filter."
-                }
-              },
-              "required": [
-                "envId",
-                "dimension"
-              ]
-            }
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000001"
-          }
-        }
-      },
-      "actions": {
-        "Perform_an_unbound_action": {
-          "type": "OpenApiConnection",
-          "inputs": {
-            "parameters": {
-              "actionName": "RetrieveEnvironmentVariableSecretValue",
-              "item/EnvironmentVariableName": "dsr_AdminClientSecret"
-            },
-            "host": {
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-              "operationId": "PerformUnboundAction",
-              "connectionName": "shared_commondataserviceforapps"
-            }
-          },
-          "runAfter": {},
-          "runtimeConfiguration": {
-            "secureData": {
-              "properties": [
-                "outputs"
-              ]
-            }
-          }
-        },
-        "Get_resources": {
-          "type": "Http",
-          "inputs": {
-            "uri": "@{concat('https://licensing.powerplatform.microsoft.com/v2.0/tenants/', parameters('DSR Tenant ID (dsr_TenantId)'), '/entitlements/', triggerBody()?['dimension'], '/environments/', triggerBody()?['envId'], '/resources?skip=0&filter=contains(resourceId,''', encodeUriComponent(coalesce(triggerBody()?['search'], '')), ''')&orderby=consumed desc')}",
-            "method": "GET",
-            "authentication": {
-              "type": "ActiveDirectoryOAuth",
-              "authority": "https://login.microsoftonline.com",
-              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
-              "audience": "https://licensing.powerplatform.microsoft.com/",
-              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
-              "secret": "@{outputs('Perform_an_unbound_action')?['body/EnvironmentVariableSecretValue']}"
-            }
-          },
-          "runAfter": {
-            "Perform_an_unbound_action": [
-              "Succeeded"
-            ]
-          },
-          "runtimeConfiguration": {
-            "secureData": {
-              "properties": [
-                "inputs"
-              ]
-            }
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000010"
-          }
-        },
-        "Respond_success": {
-          "type": "Response",
-          "kind": "PowerApp",
-          "inputs": {
-            "statusCode": 200,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "body": {
-                  "title": "body",
-                  "type": "string",
-                  "x-ms-dynamically-added": true
-                }
-              }
-            },
-            "body": {
-              "body": "@{string(body('Get_resources'))}"
-            }
-          },
-          "runAfter": {
-            "Get_resources": [
-              "Succeeded"
-            ]
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000020"
-          }
-        },
-        "Respond_error": {
-          "type": "Response",
-          "kind": "PowerApp",
-          "inputs": {
-            "statusCode": 502,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "body": {
-                  "title": "body",
-                  "type": "string",
-                  "x-ms-dynamically-added": true
-                }
-              }
-            },
-            "body": {
-              "body": "@{concat('{\"error\":{\"message\":\"Licensing service call failed (status ', string(outputs('Get_resources')?['statusCode']), ')\",\"upstream\":', string(body('Get_resources')), '}}')}"
-            }
-          },
-          "runAfter": {
-            "Get_resources": [
-              "Failed",
-              "TimedOut"
-            ]
-          },
-          "metadata": {
-            "operationMetadataId": "00000000-0000-0000-0000-000000000021"
-          }
-        }
-      },
-      "outputs": {},
-      "description": "On-demand per-table storage passthrough. Invoked by the Dataverse Storage Report code app via a PowerAppV2 trigger (caller-authenticated: only app users can call it). Forwards to https://licensing.powerplatform.microsoft.com/.../entitlements/{Database|File|Log}/environments/{envId}/resources using the DSR Admin App service principal. Returns the response body as a single string field so it can be parsed on the caller side. Does NOT write anything to Dataverse."
-    }
-  },
-  "schemaVersion": "1.0.0.0"
+﻿{
+    "properties":  {
+                       "connectionReferences":  {
+                                                    "shared_commondataserviceforapps":  {
+                                                                                            "api":  {
+                                                                                                        "name":  "shared_commondataserviceforapps"
+                                                                                                    },
+                                                                                            "connection":  {
+                                                                                                               "connectionReferenceLogicalName":  "dsr_shareddataverse"
+                                                                                                           },
+                                                                                            "runtimeSource":  "embedded"
+                                                                                        }
+                                                },
+                       "definition":  {
+                                          "$schema":  "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                                          "contentVersion":  "1.0.0.0",
+                                          "parameters":  {
+                                                             "$authentication":  {
+                                                                                     "defaultValue":  {
+
+                                                                                                      },
+                                                                                     "type":  "SecureObject"
+                                                                                 },
+                                                             "$connections":  {
+                                                                                  "defaultValue":  {
+
+                                                                                                   },
+                                                                                  "type":  "Object"
+                                                                              },
+                                                             "DSR Tenant ID (dsr_TenantId)":  {
+                                                                                                  "defaultValue":  "",
+                                                                                                  "type":  "String",
+                                                                                                  "metadata":  {
+                                                                                                                   "schemaName":  "dsr_TenantId",
+                                                                                                                   "description":  "Azure AD tenant GUID used to acquire target env\u0027s Dataverse admin tokens."
+                                                                                                               }
+                                                                                              },
+                                                             "DSR Admin Client ID (dsr_AdminClientId)":  {
+                                                                                                             "defaultValue":  "",
+                                                                                                             "type":  "String",
+                                                                                                             "metadata":  {
+                                                                                                                              "schemaName":  "dsr_AdminClientId",
+                                                                                                                              "description":  "Service principal client ID (DSR Admin App) used to call the target env\u0027s Dataverse Web API."
+                                                                                                                          }
+                                                                                                         }
+                                                         },
+                                          "triggers":  {
+                                                           "manual":  {
+                                                                          "type":  "Request",
+                                                                          "kind":  "PowerAppV2",
+                                                                          "inputs":  {
+                                                                                         "schema":  {
+                                                                                                        "type":  "object",
+                                                                                                        "properties":  {
+                                                                                                                           "envUrl":  {
+                                                                                                                                          "type":  "string",
+                                                                                                                                          "x-ms-content-hint":  "TEXT",
+                                                                                                                                          "x-ms-dynamically-added":  true,
+                                                                                                                                          "title":  "envUrl",
+                                                                                                                                          "description":  "Target Dataverse env URL (e.g. https://bprocidatest.crm.dynamics.com/)."
+                                                                                                                                      }
+                                                                                                                       },
+                                                                                                        "required":  [
+                                                                                                                         "envUrl"
+                                                                                                                     ]
+                                                                                                    }
+                                                                                     },
+                                                                          "metadata":  {
+                                                                                           "operationMetadataId":  "00000000-0000-0000-0000-000000000001"
+                                                                                       }
+                                                                      }
+                                                       },
+                                          "actions":  {
+                                                          "Perform_an_unbound_action":  {
+                                                                                            "type":  "OpenApiConnection",
+                                                                                            "inputs":  {
+                                                                                                           "parameters":  {
+                                                                                                                              "actionName":  "RetrieveEnvironmentVariableSecretValue",
+                                                                                                                              "item/EnvironmentVariableName":  "dsr_AdminClientSecret"
+                                                                                                                          },
+                                                                                                           "host":  {
+                                                                                                                        "apiId":  "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                                                                                        "operationId":  "PerformUnboundAction",
+                                                                                                                        "connectionName":  "shared_commondataserviceforapps"
+                                                                                                                    }
+                                                                                                       },
+                                                                                            "runAfter":  {
+
+                                                                                                         },
+                                                                                            "runtimeConfiguration":  {
+                                                                                                                         "secureData":  {
+                                                                                                                                            "properties":  [
+                                                                                                                                                               "outputs"
+                                                                                                                                                           ]
+                                                                                                                                        }
+                                                                                                                     }
+                                                                                        },
+                                                          "Trim_env_url":  {
+                                                                               "type":  "Compose",
+                                                                               "inputs":  "@{if(endsWith(triggerBody()?[\u0027envUrl\u0027], \u0027/\u0027), substring(triggerBody()?[\u0027envUrl\u0027], 0, sub(length(triggerBody()?[\u0027envUrl\u0027]), 1)), triggerBody()?[\u0027envUrl\u0027])}",
+                                                                               "runAfter":  {
+                                                                                                "Perform_an_unbound_action":  [
+                                                                                                                                  "Succeeded"
+                                                                                                                              ]
+                                                                                            },
+                                                                               "metadata":  {
+                                                                                                "operationMetadataId":  "00000000-0000-0000-0000-000000000005"
+                                                                                            }
+                                                                           },
+                                                          "Get_entity_definitions":  {
+                                                                                         "type":  "Http",
+                                                                                         "inputs":  {
+                                                                                                        "uri":  "@{concat(outputs(\u0027Trim_env_url\u0027), \u0027/api/data/v9.2/EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity,IsManaged,IsPrivate,IsIntersect,IsLogicalEntity,DataProviderId\u0027)}",
+                                                                                                        "method":  "GET",
+                                                                                                        "headers":  {
+                                                                                                                        "Accept":  "application/json",
+                                                                                                                        "OData-Version":  "4.0",
+                                                                                                                        "OData-MaxVersion":  "4.0"
+                                                                                                                    },
+                                                                                                        "authentication":  {
+                                                                                                                               "type":  "ActiveDirectoryOAuth",
+                                                                                                                               "authority":  "https://login.microsoftonline.com",
+                                                                                                                               "tenant":  "@{parameters(\u0027DSR Tenant ID (dsr_TenantId)\u0027)}",
+                                                                                                                               "audience":  "@{outputs(\u0027Trim_env_url\u0027)}",
+                                                                                                                               "clientId":  "@{parameters(\u0027DSR Admin Client ID (dsr_AdminClientId)\u0027)}",
+                                                                                                                               "secret":  "@{outputs(\u0027Perform_an_unbound_action\u0027)?[\u0027body/EnvironmentVariableSecretValue\u0027]}"
+                                                                                                                           }
+                                                                                                    },
+                                                                                         "runAfter":  {
+                                                                                                          "Trim_env_url":  [
+                                                                                                                               "Succeeded"
+                                                                                                                           ]
+                                                                                                      },
+                                                                                         "runtimeConfiguration":  {
+                                                                                                                      "secureData":  {
+                                                                                                                                         "properties":  [
+                                                                                                                                                            "inputs"
+                                                                                                                                                        ]
+                                                                                                                                     }
+                                                                                                                  },
+                                                                                         "metadata":  {
+                                                                                                          "operationMetadataId":  "00000000-0000-0000-0000-000000000010"
+                                                                                                      }
+                                                                                     },
+                                                          "Filter_user_facing_entities":  {
+                                                                                              "type":  "Query",
+                                                                                              "inputs":  {
+                                                                                                             "from":  "@body(\u0027Get_entity_definitions\u0027)?[\u0027value\u0027]",
+                                                                                                             "where":  "@and(and(and(and(not(item()?[\u0027IsPrivate\u0027]), not(item()?[\u0027IsIntersect\u0027])), not(item()?[\u0027IsLogicalEntity\u0027])), equals(coalesce(item()?[\u0027DataProviderId\u0027], \u002700000000-0000-0000-0000-000000000000\u0027), \u002700000000-0000-0000-0000-000000000000\u0027)), or(and(item()?[\u0027IsCustomEntity\u0027], not(item()?[\u0027IsManaged\u0027])), contains(createArray(\u0027account\u0027,\u0027contact\u0027,\u0027lead\u0027,\u0027opportunity\u0027,\u0027quote\u0027,\u0027salesorder\u0027,\u0027invoice\u0027,\u0027activitypointer\u0027,\u0027email\u0027,\u0027task\u0027,\u0027appointment\u0027,\u0027phonecall\u0027,\u0027letter\u0027,\u0027fax\u0027,\u0027socialactivity\u0027,\u0027annotation\u0027,\u0027systemuser\u0027,\u0027team\u0027,\u0027businessunit\u0027,\u0027role\u0027,\u0027knowledgearticle\u0027,\u0027incident\u0027,\u0027campaign\u0027,\u0027list\u0027,\u0027goal\u0027,\u0027product\u0027,\u0027pricelevel\u0027,\u0027productpricelevel\u0027,\u0027asyncoperation\u0027,\u0027workflow\u0027,\u0027workflowlog\u0027,\u0027solution\u0027,\u0027publisher\u0027,\u0027activitymimeattachment\u0027,\u0027audit\u0027,\u0027plugintracelog\u0027,\u0027importfile\u0027,\u0027importjob\u0027,\u0027duplicaterule\u0027,\u0027sla\u0027), item()?[\u0027LogicalName\u0027])))"
+                                                                                                         },
+                                                                                              "runAfter":  {
+                                                                                                               "Get_entity_definitions":  [
+                                                                                                                                              "Succeeded"
+                                                                                                                                          ]
+                                                                                                           },
+                                                                                              "metadata":  {
+                                                                                                               "operationMetadataId":  "00000000-0000-0000-0000-000000000011"
+                                                                                                           }
+                                                                                          },
+                                                          "Init_all_counts":  {
+                                                                                  "type":  "InitializeVariable",
+                                                                                  "inputs":  {
+                                                                                                 "variables":  [
+                                                                                                                   {
+                                                                                                                       "name":  "AllCounts",
+                                                                                                                       "type":  "Array",
+                                                                                                                       "value":  [
+
+                                                                                                                                 ]
+                                                                                                                   }
+                                                                                                               ]
+                                                                                             },
+                                                                                  "runAfter":  {
+                                                                                                   "Filter_user_facing_entities":  [
+                                                                                                                                       "Succeeded"
+                                                                                                                                   ]
+                                                                                               },
+                                                                                  "metadata":  {
+                                                                                                   "operationMetadataId":  "00000000-0000-0000-0000-000000000020"
+                                                                                               }
+                                                                              },
+                                                          "Init_entity_names":  {
+                                                                                    "type":  "Select",
+                                                                                    "inputs":  {
+                                                                                                   "from":  "@body(\u0027Filter_user_facing_entities\u0027)",
+                                                                                                   "select":  "@concat(\u0027%22\u0027, item()?[\u0027LogicalName\u0027], \u0027%22\u0027)"
+                                                                                               },
+                                                                                    "runAfter":  {
+                                                                                                     "Init_all_counts":  [
+                                                                                                                             "Succeeded"
+                                                                                                                         ]
+                                                                                                 },
+                                                                                    "metadata":  {
+                                                                                                     "operationMetadataId":  "00000000-0000-0000-0000-000000000021"
+                                                                                                 }
+                                                                                },
+                                                          "Init_batch_index":  {
+                                                                                   "type":  "InitializeVariable",
+                                                                                   "inputs":  {
+                                                                                                  "variables":  [
+                                                                                                                    {
+                                                                                                                        "name":  "BatchIndex",
+                                                                                                                        "type":  "Integer",
+                                                                                                                        "value":  0
+                                                                                                                    }
+                                                                                                                ]
+                                                                                              },
+                                                                                   "runAfter":  {
+                                                                                                    "Init_entity_names":  [
+                                                                                                                              "Succeeded"
+                                                                                                                          ]
+                                                                                                },
+                                                                                   "metadata":  {
+                                                                                                    "operationMetadataId":  "00000000-0000-0000-0000-000000000022"
+                                                                                                }
+                                                                               },
+                                                          "Foreach_entity":  {
+                                                                                 "type":  "Foreach",
+                                                                                 "foreach":  "@body(\u0027Init_entity_names\u0027)",
+                                                                                 "actions":  {
+                                                                                                 "Get_count":  {
+                                                                                                                   "type":  "Http",
+                                                                                                                   "inputs":  {
+                                                                                                                                  "uri":  "@{concat(outputs(\u0027Trim_env_url\u0027), \u0027/api/data/v9.2/RetrieveTotalRecordCount(EntityNames=@p1)?@p1=%5B\u0027, item(), \u0027%5D\u0027)}",
+                                                                                                                                  "method":  "GET",
+                                                                                                                                  "headers":  {
+                                                                                                                                                  "Accept":  "application/json",
+                                                                                                                                                  "OData-Version":  "4.0",
+                                                                                                                                                  "OData-MaxVersion":  "4.0"
+                                                                                                                                              },
+                                                                                                                                  "authentication":  {
+                                                                                                                                                         "type":  "ActiveDirectoryOAuth",
+                                                                                                                                                         "authority":  "https://login.microsoftonline.com",
+                                                                                                                                                         "tenant":  "@{parameters(\u0027DSR Tenant ID (dsr_TenantId)\u0027)}",
+                                                                                                                                                         "audience":  "@{outputs(\u0027Trim_env_url\u0027)}",
+                                                                                                                                                         "clientId":  "@{parameters(\u0027DSR Admin Client ID (dsr_AdminClientId)\u0027)}",
+                                                                                                                                                         "secret":  "@{outputs(\u0027Perform_an_unbound_action\u0027)?[\u0027body/EnvironmentVariableSecretValue\u0027]}"
+                                                                                                                                                     }
+                                                                                                                              },
+                                                                                                                   "runAfter":  {
+
+                                                                                                                                },
+                                                                                                                   "runtimeConfiguration":  {
+                                                                                                                                                "secureData":  {
+                                                                                                                                                                   "properties":  [
+                                                                                                                                                                                      "inputs"
+                                                                                                                                                                                  ]
+                                                                                                                                                               }
+                                                                                                                                            }
+                                                                                                               },
+                                                                                                 "Append_count":  {
+                                                                                                                      "type":  "AppendToArrayVariable",
+                                                                                                                      "inputs":  {
+                                                                                                                                     "name":  "AllCounts",
+                                                                                                                                     "value":  "@body(\u0027Get_count\u0027)?[\u0027EntityRecordCountCollection\u0027]"
+                                                                                                                                 },
+                                                                                                                      "runAfter":  {
+                                                                                                                                       "Get_count":  [
+                                                                                                                                                         "Succeeded"
+                                                                                                                                                     ]
+                                                                                                                                   }
+                                                                                                                  }
+                                                                                             },
+                                                                                 "runAfter":  {
+                                                                                                  "Init_batch_index":  [
+                                                                                                                           "Succeeded"
+                                                                                                                       ]
+                                                                                              },
+                                                                                 "runtimeConfiguration":  {
+                                                                                                              "concurrency":  {
+                                                                                                                                  "repetitions":  20
+                                                                                                                              }
+                                                                                                          },
+                                                                                 "metadata":  {
+                                                                                                  "operationMetadataId":  "00000000-0000-0000-0000-000000000040"
+                                                                                              }
+                                                                             },
+                                                          "Respond_success":  {
+                                                                                  "type":  "Response",
+                                                                                  "kind":  "PowerApp",
+                                                                                  "inputs":  {
+                                                                                                 "statusCode":  200,
+                                                                                                 "schema":  {
+                                                                                                                "type":  "object",
+                                                                                                                "properties":  {
+                                                                                                                                   "body":  {
+                                                                                                                                                "title":  "body",
+                                                                                                                                                "type":  "string",
+                                                                                                                                                "x-ms-dynamically-added":  true
+                                                                                                                                            }
+                                                                                                                               }
+                                                                                                            },
+                                                                                                 "body":  {
+                                                                                                              "body":  "@{string(json(concat(\u0027{\"entities\":\u0027, string(body(\u0027Filter_user_facing_entities\u0027)), \u0027,\"batches\":\u0027, string(variables(\u0027AllCounts\u0027)), \u0027}\u0027)))}"
+                                                                                                          }
+                                                                                             },
+                                                                                  "runAfter":  {
+                                                                                                   "Foreach_entity":  [
+                                                                                                                          "Succeeded"
+                                                                                                                      ]
+                                                                                               },
+                                                                                  "metadata":  {
+                                                                                                   "operationMetadataId":  "00000000-0000-0000-0000-000000000050"
+                                                                                               }
+                                                                              },
+                                                          "Respond_error":  {
+                                                                                "type":  "Response",
+                                                                                "kind":  "PowerApp",
+                                                                                "inputs":  {
+                                                                                               "statusCode":  502,
+                                                                                               "schema":  {
+                                                                                                              "type":  "object",
+                                                                                                              "properties":  {
+                                                                                                                                 "body":  {
+                                                                                                                                              "title":  "body",
+                                                                                                                                              "type":  "string",
+                                                                                                                                              "x-ms-dynamically-added":  true
+                                                                                                                                          }
+                                                                                                                             }
+                                                                                                          },
+                                                                                               "body":  {
+                                                                                                            "body":  "@{concat(\u0027{\"error\":{\"message\":\"Row count fetch failed at status \u0027, string(coalesce(outputs(\u0027Get_entity_definitions\u0027)?[\u0027statusCode\u0027], \u0027unknown\u0027)), \u0027\",\"entityDefs\":\u0027, string(coalesce(body(\u0027Get_entity_definitions\u0027), \u0027null\u0027)), \u0027}}\u0027)}"
+                                                                                                        }
+                                                                                           },
+                                                                                "runAfter":  {
+                                                                                                 "Foreach_entity":  [
+                                                                                                                        "Failed",
+                                                                                                                        "TimedOut"
+                                                                                                                    ]
+                                                                                             },
+                                                                                "metadata":  {
+                                                                                                 "operationMetadataId":  "00000000-0000-0000-0000-000000000051"
+                                                                                             }
+                                                                            }
+                                                      },
+                                          "outputs":  {
+
+                                                      },
+                                          "description":  "SP-authenticated per-env table row counts. Called by the Dataverse Storage Report code app to populate the per-table drill-in drawer. Discovers user-facing entities in the target env then batches RetrieveTotalRecordCount calls (100 entities per batch). SP must be an Application User (Sysadmin or read privileges) in the target env."
+                                      },
+                       "templateName":  null
+                   },
+    "schemaVersion":  "1.0.0.0"
 }

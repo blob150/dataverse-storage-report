@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26044.164" OrganizationSchemaType="Full" CRMServerServiceabilityVersion="9.2.26044.00164">
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26071.168" OrganizationSchemaType="Full" CRMServerServiceabilityVersion="9.2.26071.00168">
   <Entities />
   <Roles />
   <Workflows />
@@ -26,6 +26,62 @@
       <connectionreferencedisplayname>DSR HTTP with Entra ID</connectionreferencedisplayname>
       <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
       <description>Used by dsr_gettablestorageoboe to call licensing.powerplatform.microsoft.com with the connection user's delegated Entra ID token. Bind to a Power Platform admin user before turning on the flow.</description>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontents_1c018">
+      <connectionreferencedisplayname>HTTP with Microsoft Entra ID (preauthorized) DataverseStorageReport-1c018</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontents_29176">
+      <connectionreferencedisplayname>HTTP with Microsoft Entra ID (preauthorized) DataverseStorageReport-29176</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontents_5f27f">
+      <connectionreferencedisplayname>HTTP with Microsoft Entra ID (preauthorized) DataverseStorageReport-5f27f</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontents_96259">
+      <connectionreferencedisplayname>HTTP with Microsoft Entra ID (preauthorized) DataverseStorageReport-96259</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontents_c4161">
+      <connectionreferencedisplayname>HTTP with Microsoft Entra ID (preauthorized) DataverseStorageReport-c4161</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontents</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontentsv2_5d85b">
+      <connectionreferencedisplayname>HTTP With Microsoft Entra ID DataverseStorageReport-5d85b</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontentsv2</connectorid>
+      <iscustomizable>1</iscustomizable>
+      <promptingbehavior>0</promptingbehavior>
+      <statecode>0</statecode>
+      <statuscode>1</statuscode>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="dsr_sharedwebcontentsv2_a4e81">
+      <connectionreferencedisplayname>HTTP With Microsoft Entra ID DataverseStorageReport-a4e81</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_webcontentsv2</connectorid>
       <iscustomizable>1</iscustomizable>
       <promptingbehavior>0</promptingbehavior>
       <statecode>0</statecode>

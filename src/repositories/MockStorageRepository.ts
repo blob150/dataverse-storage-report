@@ -2,15 +2,13 @@ import type {
   AppSettings,
   EnvironmentRow,
   StorageSnapshot,
-  TableStorageDimension,
-  TableStorageQuery,
-  TableStorageResponse,
+  TableRowCountResponse,
+  TableRowCountRow,
 } from '../domain/types'
 import {
   mockEnvironments,
   mockSettings,
   mockSnapshots,
-  mockTableStorage,
 } from '../data/mockData'
 import type { StorageRepository } from './StorageRepository'
 
@@ -22,29 +20,28 @@ export class MockStorageRepository implements StorageRepository {
   async getSettings(): Promise<AppSettings> { return this.settings }
   async saveSettings(settings: AppSettings): Promise<void> { this.settings = settings }
 
-  async getTableStorage(
-    envId: string,
-    dimension: TableStorageDimension,
-    query?: TableStorageQuery,
-  ): Promise<TableStorageResponse> {
-    const all = mockTableStorage(envId, dimension)
-    const search = (query?.search ?? '').toLowerCase()
-    const filtered = search
-      ? all.filter((r) => r.resourceId.toLowerCase().includes(search))
-      : all
-    const skip = Math.max(0, query?.skip ?? 0)
-    const top = Math.max(1, Math.min(query?.top ?? 50, 200))
-    const page = filtered.slice(skip, skip + top)
-    let latest: string | null = null
-    for (const r of page) {
-      if (r.lastRefreshedDate && (!latest || r.lastRefreshedDate > latest)) latest = r.lastRefreshedDate
-    }
+  async getTableRowCounts(env: EnvironmentRow): Promise<TableRowCountResponse> {
+    // Deterministic fake counts so the drawer is explorable in mock mode.
+    const names = [
+      'account', 'contact', 'systemuser', 'businessunit',
+      'workflow', 'asyncoperation', 'auditbase', 'plugintracelog',
+      'connectionreference', 'msdyn_flow', 'msdyn_botcomponent', 'annotation',
+      'dsr_environment', 'dsr_storagesnapshot', 'dsr_setting',
+    ]
+    let seed = 0
+    for (const c of env.environmentId) seed = (seed + c.charCodeAt(0)) & 0xffff
+    const rows: TableRowCountRow[] = names.map((n, i) => ({
+      logicalName: n,
+      displayName: n.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      rowCount: Math.floor((names.length - i) * 1200 * ((seed % 13) + 1) / (i + 1)),
+      isCustom: n.startsWith('dsr_') || n.startsWith('msdyn_'),
+    }))
+    rows.sort((a, b) => b.rowCount - a.rowCount)
     return {
-      envId,
-      dimension,
-      rows: page,
-      hasMore: skip + top < filtered.length,
-      latestRefreshDate: latest,
+      envId: env.environmentId,
+      envUrl: env.url ?? '',
+      fetchedAt: new Date().toISOString(),
+      rows,
     }
   }
 }

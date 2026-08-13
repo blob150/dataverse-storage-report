@@ -4,12 +4,8 @@
  */
 
 export interface ManualTriggerInput {
-  // Power Platform environment GUID.
-  envId: string;
-  // Storage dimension: Database | File | Log.
-  dimension: string;
-  // Substring filter over resourceId. Empty for no filter.
-  search?: string;
+  // Target Dataverse env URL (e.g. https://bprocidatest.crm.dynamics.com/).
+  envUrl: string;
 }
 
 export interface ResponseActionOutput {

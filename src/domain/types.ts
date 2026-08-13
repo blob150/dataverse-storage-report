@@ -80,39 +80,22 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultEnvironmentTypes: ['Production', 'Sandbox'],
 }
 
-// Dimension of Dataverse storage we drill into per environment.
-// Maps directly to the licensing entitlement path segment.
-export type TableStorageDimension = 'Database' | 'File' | 'Log'
-
-export const TABLE_STORAGE_DIMENSIONS: TableStorageDimension[] = ['Database', 'File', 'Log']
-
-// One row in the per-table storage response for a given env + dimension.
-// resourceId is the raw SQL/logical table name from the licensing service
-// (may be a *Base suffix or a SQL system view like sys_columns). consumedMb
-// is the storage consumption in megabytes even though the wire "unit" field
-// is literally the string "Count".
-export type TableStorageRow = {
-  resourceId: string
-  consumedMb: number
-  lastRefreshedDate: string
+// Per-table row-count drill-in response. Bytes-per-table is not currently
+// exposed by any Microsoft API to non-preauthorized apps (see docs); we fall
+// back to row counts via the target env's Dataverse Web API. Real-time, no
+// cataloging.
+export type TableRowCountRow = {
+  logicalName: string
+  displayName: string
+  rowCount: number
+  isCustom: boolean
 }
 
-// Full response the drawer works with. hasMore indicates whether a follow-up
-// paged request would return more rows (skip += top).
-export type TableStorageResponse = {
+export type TableRowCountResponse = {
   envId: string
-  dimension: TableStorageDimension
-  rows: TableStorageRow[]
-  hasMore: boolean
-  // Latest lastRefreshedDate across returned rows — surfaced in the UI so
-  // users know how stale the licensing-service snapshot is.
-  latestRefreshDate: string | null
-}
-
-export type TableStorageQuery = {
-  search?: string
-  skip?: number
-  top?: number
+  envUrl: string
+  fetchedAt: string
+  rows: TableRowCountRow[]
 }
 
 export const ALL_ENVIRONMENT_TYPES: EnvironmentType[] = [

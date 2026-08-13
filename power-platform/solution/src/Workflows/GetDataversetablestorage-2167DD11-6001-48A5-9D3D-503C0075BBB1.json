@@ -1,0 +1,332 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "dsr_shareddataverse"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "DSR Tenant ID (dsr_TenantId)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "dsr_TenantId",
+            "description": "Azure AD tenant GUID used to acquire target env's Dataverse admin tokens."
+          }
+        },
+        "DSR Admin Client ID (dsr_AdminClientId)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "dsr_AdminClientId",
+            "description": "Service principal client ID (DSR Admin App) used to call the target env's Dataverse Web API."
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "envUrl": {
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true,
+                  "title": "envUrl",
+                  "description": "Target Dataverse env URL (e.g. https://bprocidatest.crm.dynamics.com/)."
+                }
+              },
+              "required": [
+                "envUrl"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000001"
+          }
+        }
+      },
+      "actions": {
+        "Perform_an_unbound_action": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "actionName": "RetrieveEnvironmentVariableSecretValue",
+              "item/EnvironmentVariableName": "dsr_AdminClientSecret"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "PerformUnboundAction",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {},
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "outputs"
+              ]
+            }
+          }
+        },
+        "Trim_env_url": {
+          "type": "Compose",
+          "inputs": "@{if(endsWith(triggerBody()?['envUrl'], '/'), substring(triggerBody()?['envUrl'], 0, sub(length(triggerBody()?['envUrl']), 1)), triggerBody()?['envUrl'])}",
+          "runAfter": {
+            "Perform_an_unbound_action": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000005"
+          }
+        },
+        "Get_entity_definitions": {
+          "type": "Http",
+          "inputs": {
+            "uri": "@{concat(outputs('Trim_env_url'), '/api/data/v9.2/EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity,IsManaged,IsPrivate,IsIntersect,IsLogicalEntity,DataProviderId')}",
+            "method": "GET",
+            "headers": {
+              "Accept": "application/json",
+              "OData-Version": "4.0",
+              "OData-MaxVersion": "4.0"
+            },
+            "authentication": {
+              "type": "ActiveDirectoryOAuth",
+              "authority": "https://login.microsoftonline.com",
+              "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+              "audience": "@{outputs('Trim_env_url')}",
+              "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+              "secret": "@{outputs('Perform_an_unbound_action')?['body/EnvironmentVariableSecretValue']}"
+            }
+          },
+          "runAfter": {
+            "Trim_env_url": [
+              "Succeeded"
+            ]
+          },
+          "runtimeConfiguration": {
+            "secureData": {
+              "properties": [
+                "inputs"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000010"
+          }
+        },
+        "Filter_user_facing_entities": {
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Get_entity_definitions')?['value']",
+            "where": "@and(and(and(and(not(item()?['IsPrivate']), not(item()?['IsIntersect'])), not(item()?['IsLogicalEntity'])), equals(coalesce(item()?['DataProviderId'], '00000000-0000-0000-0000-000000000000'), '00000000-0000-0000-0000-000000000000')), or(and(item()?['IsCustomEntity'], not(item()?['IsManaged'])), contains(createArray('account','contact','lead','opportunity','quote','salesorder','invoice','activitypointer','email','task','appointment','phonecall','letter','fax','socialactivity','annotation','systemuser','team','businessunit','role','knowledgearticle','incident','campaign','list','goal','product','pricelevel','productpricelevel','asyncoperation','workflow','workflowlog','solution','publisher','activitymimeattachment','audit','plugintracelog','importfile','importjob','duplicaterule','sla'), item()?['LogicalName'])))"
+          },
+          "runAfter": {
+            "Get_entity_definitions": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000011"
+          }
+        },
+        "Init_all_counts": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AllCounts",
+                "type": "Array",
+                "value": []
+              }
+            ]
+          },
+          "runAfter": {
+            "Filter_user_facing_entities": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000020"
+          }
+        },
+        "Init_entity_names": {
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Filter_user_facing_entities')",
+            "select": "@concat('%22', item()?['LogicalName'], '%22')"
+          },
+          "runAfter": {
+            "Init_all_counts": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000021"
+          }
+        },
+        "Init_batch_index": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BatchIndex",
+                "type": "Integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Init_entity_names": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000022"
+          }
+        },
+        "Foreach_entity": {
+          "type": "Foreach",
+          "foreach": "@body('Init_entity_names')",
+          "actions": {
+            "Get_count": {
+              "type": "Http",
+              "inputs": {
+                "uri": "@{concat(outputs('Trim_env_url'), '/api/data/v9.2/RetrieveTotalRecordCount(EntityNames=@p1)?@p1=%5B', item(), '%5D')}",
+                "method": "GET",
+                "headers": {
+                  "Accept": "application/json",
+                  "OData-Version": "4.0",
+                  "OData-MaxVersion": "4.0"
+                },
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "authority": "https://login.microsoftonline.com",
+                  "tenant": "@{parameters('DSR Tenant ID (dsr_TenantId)')}",
+                  "audience": "@{outputs('Trim_env_url')}",
+                  "clientId": "@{parameters('DSR Admin Client ID (dsr_AdminClientId)')}",
+                  "secret": "@{outputs('Perform_an_unbound_action')?['body/EnvironmentVariableSecretValue']}"
+                }
+              },
+              "runAfter": {},
+              "runtimeConfiguration": {
+                "secureData": {
+                  "properties": [
+                    "inputs"
+                  ]
+                }
+              }
+            },
+            "Append_count": {
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "AllCounts",
+                "value": "@body('Get_count')?['EntityRecordCountCollection']"
+              },
+              "runAfter": {
+                "Get_count": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Init_batch_index": [
+              "Succeeded"
+            ]
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 20
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000040"
+          }
+        },
+        "Respond_success": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "title": "body",
+                  "type": "string",
+                  "x-ms-dynamically-added": true
+                }
+              }
+            },
+            "body": {
+              "body": "@{string(json(concat('{\"entities\":', string(body('Filter_user_facing_entities')), ',\"batches\":', string(variables('AllCounts')), '}')))}"
+            }
+          },
+          "runAfter": {
+            "Foreach_entity": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000050"
+          }
+        },
+        "Respond_error": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 502,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "body": {
+                  "title": "body",
+                  "type": "string",
+                  "x-ms-dynamically-added": true
+                }
+              }
+            },
+            "body": {
+              "body": "@{concat('{\"error\":{\"message\":\"Row count fetch failed at status ', string(coalesce(outputs('Get_entity_definitions')?['statusCode'], 'unknown')), '\",\"entityDefs\":', string(coalesce(body('Get_entity_definitions'), 'null')), '}}')}"
+            }
+          },
+          "runAfter": {
+            "Foreach_entity": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "00000000-0000-0000-0000-000000000051"
+          }
+        }
+      },
+      "outputs": {},
+      "description": "SP-authenticated per-env table row counts. Called by the Dataverse Storage Report code app to populate the per-table drill-in drawer. Discovers user-facing entities in the target env then batches RetrieveTotalRecordCount calls (100 entities per batch). SP must be an Application User (Sysadmin or read privileges) in the target env."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

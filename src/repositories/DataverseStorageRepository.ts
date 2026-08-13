@@ -12,12 +12,10 @@ import {
   type AppSettings,
   type EnvironmentRow,
   type StorageSnapshot,
-  type TableStorageDimension,
-  type TableStorageQuery,
-  type TableStorageResponse,
+  type TableRowCountResponse,
 } from '../domain/types'
 import type { StorageRepository } from './StorageRepository'
-import { invokeTableStorageFlow } from './tableStorageFlowClient'
+import { fetchTableRowCounts } from './tableStorageFlowClient'
 
 const ENVIRONMENT_SET = 'dsr_environments'
 const SNAPSHOT_SET = 'dsr_storagesnapshots'
@@ -70,13 +68,7 @@ export class DataverseStorageRepository implements StorageRepository {
     }
   }
 
-  async getTableStorage(
-    envId: string,
-    dimension: TableStorageDimension,
-    query?: TableStorageQuery,
-  ): Promise<TableStorageResponse> {
-    return invokeTableStorageFlow({
-      envId, dimension, search: query?.search,
-    })
+  async getTableRowCounts(env: EnvironmentRow, opts?: { force?: boolean }): Promise<TableRowCountResponse> {
+    return fetchTableRowCounts(env, opts)
   }
 }

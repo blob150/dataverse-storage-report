@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Workflow WorkflowId="{2167dd11-6001-48a5-9d3d-503c0075bbb1}" Name="Get Dataverse table storage" Description="On-demand HTTP-triggered passthrough flow. The Dataverse Storage Report code app POSTs {envId, dimension, search, skip, top} to the trigger URL when a user opens the per-table drill-in drawer. Forwards to licensing.powerplatform.microsoft.com and returns the licensing service's response. Does NOT write anything to Dataverse. Bind the Dataverse connection and turn on after solution import, then paste the HTTP trigger URL into the app's Settings tab." xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <JsonFileName>/Workflows/GetTableStorage-2167DD11-6001-48A5-9D3D-503C0075BBB1.json</JsonFileName>
+<Workflow WorkflowId="{2167dd11-6001-48a5-9d3d-503c0075bbb1}" Name="Get Dataverse table storage" Description="On-demand HTTP-triggered passthrough flow. The Dataverse Storage Report code app POSTs {envId, dimension, search, skip, top} to the trigger URL when a user opens the per-table drill-in drawer. Forwards to licensing.powerplatform.microsoft.com and returns the licensing service's response. Does NOT write anything to Dataverse." xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <JsonFileName>/Workflows/GetDataversetablestorage-2167DD11-6001-48A5-9D3D-503C0075BBB1.json</JsonFileName>
   <Type>1</Type>
   <Subprocess>0</Subprocess>
   <Category>5</Category>
@@ -18,7 +18,6 @@
   <IsTransacted>1</IsTransacted>
   <IntroducedVersion>1.1</IntroducedVersion>
   <IsCustomizable>1</IsCustomizable>
-  <BusinessProcessType>0</BusinessProcessType>
   <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
   <ModernFlowType>0</ModernFlowType>
   <PrimaryEntity>none</PrimaryEntity>
